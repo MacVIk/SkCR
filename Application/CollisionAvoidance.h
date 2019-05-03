@@ -19,17 +19,9 @@
 #define MAX_RANGEFINDERS_DISTANCE 			50 			// sm. rangefinders distance for collision (got from Misha)
 #define QUEUE_IS_EMPTY						0
 #define RANGEFINDERS_NUMBER		((uint8_t)  6)			// number of rangefinders we use
-#define NO_COLLISION			((uint8_t)  255)
-#define COLLISION_DETECTED 		((uint16_t) 0)
-#define RESET_COLLISION_BIT 	((uint16_t) 1)
-#define ECHO_RISING_EDGE 		((uint8_t)  0)			// interrupt detection with the rising edge
-#define ECHO_FALLING_EDGE		((uint8_t)  1)			// interrupt detection with the falling edge
 
 // filtration empiric constants
 #define CONST_HISTOR_ARR		((uint8_t)  15)			//size of array for previous collision data
-#define CONST_MAX_JUMP_VALUE	((uint8_t)  6)			// max value of rangefinders jumps (empirical constant for filtration)
-#define CONST_RANDOM_VALUE_NUMB	((uint8_t)  5)
-#define CONST_SIGNIFICANT		((uint8_t)  8)
 
 class CollisionAvoidance: public iActiveObject {
 public:

@@ -432,7 +432,7 @@ void InitialisationList::InterruptInit()
 	SensInterrupt.EXTI_Line = EXTI_Line10 | EXTI_Line11| EXTI_Line12 | EXTI_Line13 |
 			EXTI_Line14 | EXTI_Line15;
 	SensInterrupt.EXTI_Mode = EXTI_Mode_Interrupt;
-	SensInterrupt.EXTI_Trigger = EXTI_Trigger_Rising_Falling;
+	SensInterrupt.EXTI_Trigger = EXTI_Trigger_Falling;
 	SensInterrupt.EXTI_LineCmd = ENABLE;
 	EXTI_Init(&SensInterrupt);
 

@@ -9,17 +9,14 @@
 
 CollisionAvoidance *sensorTask;
 
-uint8_t  interruptFlag[RANGEFINDERS_NUMBER];
-uint16_t sensTimeArr[2][RANGEFINDERS_NUMBER];
+uint16_t sensTimeArr[RANGEFINDERS_NUMBER];
 
 CollisionAvoidance::CollisionAvoidance()
 {
 	xCollisionAvoidanceQueue = xQueueCreate(RANGEFINDERS_NUMBER, sizeof(uint8_t));
 	xCollisionAvoidanceMutex = xSemaphoreCreateMutex();
-	for (uint8_t i = 0; i < RANGEFINDERS_NUMBER; i++) {
-		interruptFlag[i] = (ECHO_RISING_EDGE);
+	for (uint8_t i = 0; i < RANGEFINDERS_NUMBER; i++)
 		this->sensDistArr[i] = new uint8_t[15];					//create array for distance history
-	}
 }
 
 CollisionAvoidance::~CollisionAvoidance(){
@@ -62,9 +59,10 @@ void CollisionAvoidance::calculateDistanceQsort(uint8_t* distArr, uint8_t i)
 {
 	uint16_t timeBuff = 0;
 	uint8_t median = 0;
-	timeBuff = (sensTimeArr[1][i] - sensTimeArr[0][i]);
-	distArr[0] = (uint8_t) (timeBuff / 56);
-	distArr[0] = (distArr[0] >= MAX_RANGEFINDERS_DISTANCE) ? (MAX_RANGEFINDERS_DISTANCE) : (distArr[0]);
+	if (sensTimeArr[i] == 0xff)
+		distArr[0] = 0xff;
+	else
+		distArr[0] = (sensTimeArr[i] - 500) / 56;
 	uint8_t sortArr[15];
 	for (uint8_t j = 0; j < 15; j++)
 		sortArr[j] = distArr[j];
@@ -81,22 +79,17 @@ void CollisionAvoidance::run()
 	TickType_t xLastWakeTime;
 
 	while(1) {
-		GPIO_SetBits(GPIOD, GPIO_PinSource12);
-		GPIO_ResetBits(GPIOD, GPIO_PinSource14);
 		xLastWakeTime = xTaskGetTickCount();
 		xSemaphoreTake(xCollisionAvoidanceMutex, portMAX_DELAY);
 		if (uxQueueMessagesWaiting(xCollisionAvoidanceQueue) != 0)
-					xQueueReset(xCollisionAvoidanceQueue);
+			xQueueReset(xCollisionAvoidanceQueue);
 		for (uint8_t i = 0; i < RANGEFINDERS_NUMBER; i++) {
 			calculateDistanceQsort(sensDistArr[i], i);
-			xQueueSend(xCollisionAvoidanceQueue, &sensDistArr[i][0], portMAX_DELAY);
-			interruptFlag[i] = (ECHO_RISING_EDGE);				// Reset the interrupt state flag
-		}														// for on fly connection.
+			xQueueSend(xCollisionAvoidanceQueue, &sensDistArr[i][0], 10);
+		}
 		xSemaphoreGive(xCollisionAvoidanceMutex);
 		TIM_SetCounter(TIM10, 0);								//  Reload timer to generate trigger signal.
 		TIM_SetCounter(TIM6, 0);
-		GPIO_SetBits(GPIOD, GPIO_PinSource14);
-		GPIO_ResetBits(GPIOD, GPIO_PinSource12);
 		taskDelayUntil(&xLastWakeTime, oRTOS.fromMsToTick(MIN_RESPONCE_TIME));
 	}
 }
@@ -106,28 +99,40 @@ extern "C"
 void EXTI15_10_IRQHandler(){
 	if (EXTI_GetITStatus(EXTI_Line10)) {
 		EXTI_ClearITPendingBit(EXTI_Line10);
-		sensTimeArr[interruptFlag[0]][0] = TIM_GetCounter(TIM6);
-		interruptFlag[0] = (interruptFlag[0] == ECHO_RISING_EDGE) ? (ECHO_FALLING_EDGE) : (ECHO_RISING_EDGE);
-	} else if (EXTI_GetITStatus(EXTI_Line11)) {
+		if (TIM_GetCounter(TIM6) > 500 && TIM_GetCounter(TIM6) < 3250)
+			sensTimeArr[0] = TIM_GetCounter(TIM6);
+		else
+			sensTimeArr[0] = 0xff;
+	} else if (EXTI_GetITStatus(EXTI_Line11) == 1) {
 		EXTI_ClearITPendingBit(EXTI_Line11);
-		sensTimeArr[interruptFlag[1]][1] = TIM_GetCounter(TIM6);
-		interruptFlag[1] = (interruptFlag[1] == ECHO_RISING_EDGE) ? (ECHO_FALLING_EDGE) : (ECHO_RISING_EDGE);
-	} else if (EXTI_GetITStatus(EXTI_Line12)) {
+		if (TIM_GetCounter(TIM6) > 500 && TIM_GetCounter(TIM6) < 3250)
+			sensTimeArr[1] = TIM_GetCounter(TIM6);
+		else
+			sensTimeArr[1] = 0xff;
+	} else if (EXTI_GetITStatus(EXTI_Line12) == 1) {
 		EXTI_ClearITPendingBit(EXTI_Line12);
-		sensTimeArr[interruptFlag[2]][2] = TIM_GetCounter(TIM6);
-		interruptFlag[2] = (interruptFlag[2] == ECHO_RISING_EDGE) ? (ECHO_FALLING_EDGE) : (ECHO_RISING_EDGE);
-	} else if (EXTI_GetITStatus(EXTI_Line13)) {
+		if (TIM_GetCounter(TIM6) > 500 && TIM_GetCounter(TIM6) < 3250)
+			sensTimeArr[2] = TIM_GetCounter(TIM6);
+		else
+			sensTimeArr[2] = 0xff;
+	} else if (EXTI_GetITStatus(EXTI_Line13) == 1) {
 		EXTI_ClearITPendingBit(EXTI_Line13);
-		sensTimeArr[interruptFlag[3]][3] = TIM_GetCounter(TIM6);
-		interruptFlag[3] = (interruptFlag[3] == ECHO_RISING_EDGE) ? (ECHO_FALLING_EDGE) : (ECHO_RISING_EDGE);
-	} else if (EXTI_GetITStatus(EXTI_Line14)) {
+		if (TIM_GetCounter(TIM6) > 500 && TIM_GetCounter(TIM6) < 3250)
+			sensTimeArr[3] = TIM_GetCounter(TIM6);
+		else
+			sensTimeArr[3] = 0xff;
+	} else if (EXTI_GetITStatus(EXTI_Line14) == 1) {
 		EXTI_ClearITPendingBit(EXTI_Line14);
-		sensTimeArr[interruptFlag[4]][4] = TIM_GetCounter(TIM6);
-		interruptFlag[4] = (interruptFlag[4] == ECHO_RISING_EDGE) ? (ECHO_FALLING_EDGE) : (ECHO_RISING_EDGE);
-	} else if (EXTI_GetITStatus(EXTI_Line15)) {
+		if (TIM_GetCounter(TIM6) > 500 && TIM_GetCounter(TIM6) < 3250)
+			sensTimeArr[4] = TIM_GetCounter(TIM6);
+		else
+			sensTimeArr[4] = 0xff;
+	} else if (EXTI_GetITStatus(EXTI_Line15) == 1) {
 		EXTI_ClearITPendingBit(EXTI_Line15);
-		sensTimeArr[interruptFlag[5]][5] = TIM_GetCounter(TIM6);
-		interruptFlag[5] = (interruptFlag[5] == ECHO_RISING_EDGE) ? (ECHO_FALLING_EDGE) : (ECHO_RISING_EDGE);
+		if (TIM_GetCounter(TIM6) > 500 && TIM_GetCounter(TIM6) < 3250)
+			sensTimeArr[5] = TIM_GetCounter(TIM6);
+		else
+			sensTimeArr[5] = 0xff;
 	}
   }
 }
