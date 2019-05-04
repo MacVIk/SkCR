@@ -12,14 +12,11 @@ UARTuserInit uart3;
 UARTuserInit uart4;
 UARTtoRS485	motor1;
 UARTtoRS485 motor2;
-SemaphoreHandle_t xAngleMutex;
-SemaphoreHandle_t xHighLvlMutex;
-SemaphoreHandle_t xWheelMutex;
 
 HyroMotor::HyroMotor() {
-	this->xAngleQueue = xQueueCreate(12, sizeof(uint8_t));
+	xAngleQueue = xQueueCreate(12, sizeof(uint8_t));
 	xAngleMutex = xSemaphoreCreateMutex();
-	this->xHighLvlQueue = xQueueCreate(8, sizeof(uint8_t));
+	xHighLvlQueue = xQueueCreate(8, sizeof(uint8_t));
 	xHighLvlMutex = xSemaphoreCreateMutex();
 	motArr[0] = &motor1;
 	motArr[1] = &motor2;
@@ -58,11 +55,9 @@ void HyroMotor::switchPin()
 		txFlag = true;
 }
 
-void HyroMotor::robotSpeed2WheelSpeed(uint8_t* hDatArr, int16_t* whArr)
+void HyroMotor::robotSpeed2WheelSpeed(float* robArr, int16_t* whArr)
 {
-	float32_t robArr[2];
 	float32_t buff[2];
-	memcpy(robArr, hDatArr, sizeof(robArr));
 	buff[0] = (robArr[0] + robArr[1] * L_CENTER) * CONST_WHEEL_1 / R_WHEEL;
 	buff[1] = (robArr[0] - robArr[1] * L_CENTER) * CONST_WHEEL_2 / R_WHEEL;
 	for (uint8_t i = 0; i < 2; i ++) {
@@ -153,6 +148,8 @@ void HyroMotor::run()
 	int32_t whAngleArr[2] = {0};
 	int32_t whAngleHistArr[2] = {0};
 	float32_t xyalfArr[3] = {0};
+	float32_t robotSpeed[2];
+	uint8_t color = 3;
 
 	uart3.uartInit(GPIOB, USART3, true);
 	uart3.gpioSwitchInit(GPIOB, GPIO_Pin_12);
@@ -177,10 +174,19 @@ void HyroMotor::run()
 				for (j = 0; j < 8; j++)
 					xQueueReceive(xHighLvlQueue, &speedByteArr[j], portMAX_DELAY);
 				xSemaphoreGive(xHighLvlMutex);
-				robotSpeed2WheelSpeed(speedByteArr, wheelSpeed);
+				memcpy(robotSpeed, speedByteArr, sizeof(robotSpeed));
+				if (collisionHandler->getStatus() && robotSpeed[0] > 0) {
+					color = 1; 										//red
+					robotSpeed[0] = 0;
+				} else if (robotSpeed[0] || robotSpeed[1]) {
+					color = 3;
+				} else
+					color = 2;
+				robotSpeed2WheelSpeed(robotSpeed, wheelSpeed);
 				motor1.modbusWriteReg(1, REG_SET_SPEED, wheelSpeed[0]);
 				motor2.modbusWriteReg(2, REG_SET_SPEED, wheelSpeed[1]);
 				curCom = REG_ERROR_CODE;
+				xQueueOverwrite(xLightColorQueue, &color);
 			} else {
 				motor1.modbusReadData(rxRsDataArr[0], length);
 				motor2.modbusReadData(rxRsDataArr[1], length);

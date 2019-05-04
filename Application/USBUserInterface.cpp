@@ -11,6 +11,7 @@ USBUserInterface* usbUserInterface;
 UARTuserInit uart6;
 
 USBUserInterface::USBUserInterface() {
+	this->xTaskToNotify = 0;
 }
 
 USBUserInterface::~USBUserInterface() {
@@ -18,9 +19,9 @@ USBUserInterface::~USBUserInterface() {
 
 void USBUserInterface::run()
 {
-	uint8_t answerLength;
-	uint8_t i = 0;
-	uint8_t histColArr[RANGEFINDERS_NUMBER + 1] = {0};
+	uint8_t answerLength = 0;
+	uint8_t errStatus = 0;
+	uint8_t histDistArr[RANGEFINDERS_NUMBER] = {0};
 	uint8_t histAngArr[12] = {0};
 
 	this->xTaskToNotify = xTaskGetCurrentTaskHandle();
@@ -28,62 +29,60 @@ void USBUserInterface::run()
 
 	while(1) {
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+		errStatus = 0;
+
 		if (uart6.usartRxArr[0] == ECHO) {
 			uart6.usartTxArr[0] = 0x11;
-			uart6.usartTxArr[1] = uart6.usartTxArr[0];
-			answerLength = 2;
+			answerLength = 1;
 
 		} else if (uart6.usartRxArr[0] == SET_COLOR_NUMBER) {
-			setLEDTask->writeToQueue(uart6.usartRxArr[1]);
+			xQueueOverwrite(xLightColorQueue, &uart6.usartRxArr[1]);
 			uart6.usartTxArr[0] = 0;
-			uart6.usartTxArr[1] = uart6.usartTxArr[0];
-			answerLength = 2;
+			answerLength = 1;
 
 		} else if (uart6.usartRxArr[0] == GET_BATTERY_CHARGE) {
-			getBatChargeTask->readFromQueue(uart6.usartTxArr[0]);
-			uart6.usartTxArr[1] = uart6.usartTxArr[0];
-			answerLength = 2;
+			xQueueReceive(xBatteryChargeQueue, &uart6.usartTxArr[0], portMAX_DELAY);
+			answerLength = 1;
 
 		} else if (uart6.usartRxArr[0] == GET_COLLISION_STATUS) {
 			uart6.usartTxArr[RANGEFINDERS_NUMBER + 1] = 0;
-			if (uxQueueMessagesWaiting(sensorTask->xCollisionAvoidanceQueue))
-				for (i = 0; i < RANGEFINDERS_NUMBER; i++)
-					xQueueReceive(sensorTask->xCollisionAvoidanceQueue, &histColArr[i], portMAX_DELAY);
-			for (i = 0; i < RANGEFINDERS_NUMBER; i++) {
-				uart6.usartTxArr[i] = histColArr[i];
-				uart6.usartTxArr[RANGEFINDERS_NUMBER + 1] += uart6.usartTxArr[i];
-			}
-			uart6.usartTxArr[RANGEFINDERS_NUMBER] = hyroMotor->getWheelStatus();
-			uart6.usartTxArr[RANGEFINDERS_NUMBER + 1] += uart6.usartTxArr[RANGEFINDERS_NUMBER];
-			answerLength = RANGEFINDERS_NUMBER + 2;
+			if (uxQueueMessagesWaiting(xRengefindersHighQueue))
+				for (uint8_t i = 0; i < RANGEFINDERS_NUMBER; i++)
+					xQueueReceive(xRengefindersHighQueue, &histDistArr[i], portMAX_DELAY);
+			for (uint8_t i = 0; i < RANGEFINDERS_NUMBER; i++)
+				uart6.usartTxArr[i] = histDistArr[i];
+			answerLength = RANGEFINDERS_NUMBER;
 			hyroMotor->clearWheelStatus();
 
 		} else if (uart6.usartRxArr[0] == SEND_RS485) {			// Send to RS485 -----
-			if (uxQueueMessagesWaiting(hyroMotor->xHighLvlQueue))
-				xQueueReset(hyroMotor->xHighLvlQueue);
-			for (i = 1; i < 9; i++)
-				xQueueSend(hyroMotor->xHighLvlQueue, &uart6.usartRxArr[i], portMAX_DELAY);
+			if (uxQueueMessagesWaiting(xHighLvlQueue))
+				xQueueReset(xHighLvlQueue);
+			for (uint8_t i = 1; i < 9; i++)
+				xQueueSend(xHighLvlQueue, &uart6.usartRxArr[i], portMAX_DELAY);
 			uart6.usartTxArr[0] = SEND_RS485;
-			uart6.usartTxArr[1] = uart6.usartTxArr[0];
-			answerLength = 2;
+			answerLength = 1;
 
 		} else if (uart6.usartRxArr[0] == RECEIVE_RS485) {		// Receive from RS485 -----
 			uart6.usartTxArr[12] = 0;
-			if (uxQueueMessagesWaiting(hyroMotor->xAngleQueue))
-				for (i = 0; i < 12; i++)
-					xQueueReceive(hyroMotor->xAngleQueue, &histAngArr[i], portMAX_DELAY);
-			for (i = 0; i < 12; i++) {
+			if (uxQueueMessagesWaiting(xAngleQueue))
+				for (uint8_t i = 0; i < 12; i++)
+					xQueueReceive(xAngleQueue, &histAngArr[i], portMAX_DELAY);
+			for (uint8_t i = 0; i < 12; i++) {
 				uart6.usartTxArr[i] = histAngArr[i];
 				uart6.usartTxArr[12] += uart6.usartTxArr[i];
 			}
-			answerLength = 13;
+			answerLength = 12;
 
 		} else {
 			uart6.usartTxArr[0] = 0xff;
 			uart6.usartTxArr[1] = uart6.usartTxArr[0];
-			answerLength = 2;
+			answerLength = 1;
 		}
-		uart6.send(uart6.usartTxArr, answerLength);
+//		uart6.usartTxArr[answerLength] = hyroMotor->getWheelStatus();
+		uart6.usartTxArr[answerLength] =0;
+		for (uint8_t i = 0; i < answerLength; i++)
+			uart6.usartTxArr[answerLength] += uart6.usartTxArr[i];
+		uart6.send(uart6.usartTxArr, ++answerLength);
 	}
 }
 

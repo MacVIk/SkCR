@@ -13,8 +13,9 @@ uint16_t sensTimeArr[RANGEFINDERS_NUMBER];
 
 CollisionAvoidance::CollisionAvoidance()
 {
-	xCollisionAvoidanceQueue = xQueueCreate(RANGEFINDERS_NUMBER, sizeof(uint8_t));
-	xCollisionAvoidanceMutex = xSemaphoreCreateMutex();
+	xRengefindersHighQueue = xQueueCreate(RANGEFINDERS_NUMBER, sizeof(uint8_t));
+	xRengefindersLowQueue = xQueueCreate(RANGEFINDERS_NUMBER, sizeof(uint8_t));
+	xRengefindersMutex = xSemaphoreCreateMutex();
 	for (uint8_t i = 0; i < RANGEFINDERS_NUMBER; i++)
 		this->sensDistArr[i] = new uint8_t[15];					//create array for distance history
 }
@@ -80,14 +81,18 @@ void CollisionAvoidance::run()
 
 	while(1) {
 		xLastWakeTime = xTaskGetTickCount();
-		xSemaphoreTake(xCollisionAvoidanceMutex, portMAX_DELAY);
-		if (uxQueueMessagesWaiting(xCollisionAvoidanceQueue) != 0)
-			xQueueReset(xCollisionAvoidanceQueue);
+		xSemaphoreTake(xRengefindersMutex, portMAX_DELAY);
+		if (uxQueueMessagesWaiting(xRengefindersHighQueue) != 0)
+			xQueueReset(xRengefindersHighQueue);
+		if (uxQueueMessagesWaiting(xRengefindersLowQueue) != 0)
+			xQueueReset(xRengefindersHighQueue);
 		for (uint8_t i = 0; i < RANGEFINDERS_NUMBER; i++) {
 			calculateDistanceQsort(sensDistArr[i], i);
-			xQueueSend(xCollisionAvoidanceQueue, &sensDistArr[i][0], 10);
+			xQueueSend(xRengefindersHighQueue, &sensDistArr[i][0], 10);
+			xQueueSend(xRengefindersLowQueue, &sensDistArr[i][0], 10);
 		}
-		xSemaphoreGive(xCollisionAvoidanceMutex);
+		xSemaphoreGive(xRengefindersMutex);
+		xTaskNotifyGive(collisionHandler->xTaskToNotify);
 		TIM_SetCounter(TIM10, 0);								//  Reload timer to generate trigger signal.
 		TIM_SetCounter(TIM6, 0);
 		taskDelayUntil(&xLastWakeTime, oRTOS.fromMsToTick(MIN_RESPONCE_TIME));

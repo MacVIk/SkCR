@@ -11,7 +11,7 @@ LEDStrip* setLEDTask;
 
 LEDStrip::LEDStrip() {
 	uint8_t movementFlag = SELF_DRIVING;
-	uint8_t color = 3;
+	uint8_t color = BLUE;
 	TIM5->CCR3 = 0;
 	GPIOA->ODR |= GPIO_ODR_ODR_3;
 	GPIOA->ODR &= ~GPIO_ODR_ODR_15;
@@ -23,26 +23,21 @@ LEDStrip::LEDStrip() {
 LEDStrip::~LEDStrip() {
 }
 
-void LEDStrip::writeToQueue(uint8_t data)
-{
-	xQueueOverwrite(xLightColorQueue, &data);
-}
-
 void LEDStrip::setColor(uint8_t color)
 {
-	if (color == 1) {
+	if (color == RED) {
 		TIM5->CCR3 = 2800;
 		GPIOA->ODR &= ~GPIO_ODR_ODR_3;
 		GPIOA->ODR &= ~GPIO_ODR_ODR_15;
-	} else if (color == 2) {
+	} else if (color == GREEN) {
 		TIM5->CCR3 = 0;
 		GPIOA->ODR &= ~GPIO_ODR_ODR_3;
 		GPIOA->ODR |= GPIO_ODR_ODR_15;
-	} else if (color == 3) {
+	} else if (color == BLUE) {
 		TIM5->CCR3 = 0;
 		GPIOA->ODR |= GPIO_ODR_ODR_3;
 		GPIOA->ODR &= ~GPIO_ODR_ODR_15;
-	} else if (color == 4) {
+	} else if (color == WHITE) {
 		TIM5->CCR3 = 2800;
 		GPIOA->ODR |= GPIO_ODR_ODR_3;
 		GPIOA->ODR |= GPIO_ODR_ODR_15;
@@ -75,7 +70,7 @@ void LEDStrip::run()
 				movementFlag = MANUAL_CONTROL;
 			}
 		}
-		this->taskDelay(oRTOS.fromMsToTick(1));
+		this->taskDelay(oRTOS.fromMsToTick(10));
 	}
 }
 

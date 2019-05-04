@@ -12,8 +12,7 @@
 #include "stm32f4xx.h"
 #include "stm32f4xx_conf.h"
 #include "semphr.h"
-//#include "InitialisationList.h"
-//#include "usbd_usr.h"
+#include "QueueCreator.h"
 
 #define MAX_BATTERY_VOLTAGE 	((uint16_t)  255)	// max battery charge in ADC units (get empirically)
 #define STOP_BATTERY_VOLTAGE 	((uint16_t)  155)	// 5% of battery
@@ -28,8 +27,6 @@ public:
 	void writeToQueue(uint8_t &data);
 	void readFromQueue(uint8_t &bufferToWrite);
 private:
-	QueueHandle_t xBatteryChargeQueue;
-	SemaphoreHandle_t xBatteryChargeQueueMutex;
 };
 
 extern BatteryChargeAsker* getBatChargeTask;

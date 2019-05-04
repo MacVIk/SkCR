@@ -25,11 +25,6 @@ void BatteryChargeAsker::writeToQueue(uint8_t &data)
 	xSemaphoreGive(xBatteryChargeQueueMutex);
 }
 
-void BatteryChargeAsker::readFromQueue(uint8_t &queueValue)
-{
-	xQueueReceive(xBatteryChargeQueue, &queueValue, 10);
-}
-
 void BatteryChargeAsker::run()
 {
 	uint16_t ChargeVal = 0;

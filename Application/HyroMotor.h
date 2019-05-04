@@ -6,6 +6,7 @@
  */
 
 #include "iActiveObject.h"
+#include "QueueCreator.h"
 #include "stm32f4xx.h"
 #include "stm32f4xx_conf.h"
 #include "semphr.h"
@@ -13,6 +14,7 @@
 #include "UARTuserInit.h"
 #include "arm_math.h"
 #include <math.h>
+#include "CollisionHandler.h"
 
 #ifndef HYROMOTOR_H_
 #define HYROMOTOR_H_
@@ -92,15 +94,12 @@ public:
 	void delayPort(uint32_t ticks);
 	void taskNotifyFromISR(BaseType_t xHigherPriorityTaskWoken);
 	void switchPin();
-	void robotSpeed2WheelSpeed(uint8_t* hDatArr, int16_t* whArr);
+	void robotSpeed2WheelSpeed(float* hDatArr, int16_t* whArr);
 	void calculateXYAlf(int32_t* whArr, int32_t* whHistArr, float32_t* robArr);
 	uint8_t getWheelStatus();
 	void clearWheelStatus();
 	void motorInit(uint8_t idid2set);
 	bool highLvlFlag;
-	QueueHandle_t xAngleQueue;
-	QueueHandle_t xHighLvlQueue;
-	QueueHandle_t xWheelQueue;
 	uint8_t* rxRsDataArr[2];
 private:
 	TaskHandle_t xTaskToNotify;
