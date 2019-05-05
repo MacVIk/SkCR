@@ -10,25 +10,21 @@
 BatteryChargeAsker* getBatChargeTask;
 
 BatteryChargeAsker::BatteryChargeAsker() {
-	xBatteryChargeQueue = xQueueCreate(1, sizeof(uint8_t));
-	xBatteryChargeQueueMutex = xSemaphoreCreateMutex();
-	ADC_SoftwareStartConv(ADC1); 									//**Start primary ADC calculation
+	ChargeVal_P = 100;
+	ADC_SoftwareStartConv(ADC1); 							//**Start primary ADC calculation
 }
 
 BatteryChargeAsker::~BatteryChargeAsker() {
 }
 
-void BatteryChargeAsker::writeToQueue(uint8_t &data)
+uint8_t BatteryChargeAsker::getCharge()
 {
-	xSemaphoreTake(xBatteryChargeQueueMutex, portMAX_DELAY);
-	xQueueOverwrite(xBatteryChargeQueue, &data);
-	xSemaphoreGive(xBatteryChargeQueueMutex);
+	return this->ChargeVal_P;
 }
 
 void BatteryChargeAsker::run()
 {
 	uint16_t ChargeVal = 0;
-	uint8_t ChargeVal_P = 0;
 	uint16_t hBorder = MAX_BATTERY_VOLTAGE;
 	uint16_t sBorder = STOP_BATTERY_VOLTAGE;
 	uint16_t lBorder = MIN_BATTERY_VOLTAGE;
@@ -60,9 +56,8 @@ void BatteryChargeAsker::run()
 			}
 		} else
 			ChargeVal = lBorder;
-		ChargeVal_P = uint8_t (ChargeVal - lBorder)/perKoef;
-		writeToQueue(ChargeVal_P);
-		ADC_SoftwareStartConv(ADC1);								//** Start ADC
+		this->ChargeVal_P = uint8_t (ChargeVal - lBorder)/perKoef;
+		ADC_SoftwareStartConv(ADC1);						//** Start ADC
 		taskDelay(oRTOS.fromMsToTick(100));
 	}
 }

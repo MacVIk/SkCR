@@ -8,8 +8,8 @@
 #ifndef DEFINES_H_
 #define DEFINES_H_
 
-#define CMD_DEF(cmd_num, cmd_name) \
-					cmd_name = (cmd_num),
+//#define CMD_DEF(cmd_num, cmd_name) \
+//					cmd_name = (cmd_num),
 
 //enum
 //{
@@ -30,7 +30,7 @@ enum {
 	SET_COLOR_NUMBER				= 0x07,
 	GET_BATTERY_CHARGE				= 0x08,
 	SEND_RS485						= 0x09,
-	GET_COLLISION_STATUS			= 0X0A,
+	GET_DISTANCE					= 0X0A,
 	RECEIVE_RS485					= 0X0B
 //	FLAG
 };

@@ -14,12 +14,11 @@
 #include "semphr.h"
 #include "InitialisationList.h"
 #include "QueueCreator.h"
-#include "CollisionHandler.h"
 
-#define MIN_RESPONCE_TIME 				((uint8_t)50)			// ms. got from datasheet for ultrasonic rangefinders
-#define MAX_RANGEFINDERS_DISTANCE 		((uint8_t)50) 			// sm. rangefinders distance for collision (got from Misha)
+#define MIN_RESPONCE_TIME 				((uint8_t)50)	// ms. got from datasheet for ultrasonic rangefinders
+#define MAX_RANGEFINDERS_DISTANCE 		((uint8_t)50) 	// sm. rangefinders distance for collision (got from Misha)
 #define QUEUE_IS_EMPTY					((uint8_t)0)
-#define RANGEFINDERS_NUMBER				((uint8_t)6)			// number of rangefinders we use
+#define RANGEFINDERS_NUMBER				((uint8_t)6)	// number of rangefinders we use
 
 // filtration empiric constants
 #define CONST_HISTOR_ARR		((uint8_t)  15)			//size of array for previous collision data
@@ -31,13 +30,16 @@ public:
 	uint8_t partition(uint8_t* input, uint8_t p, uint8_t r);
 	uint8_t quick_select(uint8_t* input, uint8_t p, uint8_t r, uint8_t k);
 	void calculateDistanceQsort(uint8_t* distArr, uint8_t i);
+	void getDistance(uint8_t* distArr);
 	void run();
-
 //	QueueHandle_t xCollisionAvoidanceQueue;
-//	SemaphoreHandle_t xCollisionAvoidanceMutex;
+	SemaphoreHandle_t xRengefindersMutex;
+	TaskHandle_t xTaskToNotify;
 private:
+	uint8_t outDistArr[RANGEFINDERS_NUMBER];
 	uint8_t  *sensDistArr[RANGEFINDERS_NUMBER];
 };
 extern CollisionAvoidance *sensorTask;
+
 #endif /* COLLISIONAVOIDANCE_H_ */
 

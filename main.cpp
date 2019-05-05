@@ -43,9 +43,8 @@ int main(void)
 	InitUser.InterruptInit();
 	InitUser.TIMInit();
 
-	setLEDTask->taskCreate(256, 2, "setLED");
 	getBatChargeTask->taskCreate(256, 2, "getBatCharge");
-	sensorTask->taskCreate(256, 3, "sensorTask");
+	sensorTask->taskCreate(512, 3, "sensorTask");
 	hyroMotor->taskCreate(1024, 4, "hyroMotorTask");
 	usbUserInterface->taskCreate(512, 4, "UserUARTtoUSB");
 	collisionHandler->taskCreate(1024, 4, "CollisionHandler");

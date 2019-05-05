@@ -16,8 +16,6 @@ LEDStrip::LEDStrip() {
 	GPIOA->ODR |= GPIO_ODR_ODR_3;
 	GPIOA->ODR &= ~GPIO_ODR_ODR_15;
 //	GPIOD->ODR |= GPIO_ODR_ODR_5;
-	xLightColorQueue = xQueueCreate(1, sizeof(uint8_t));
-	xQueueOverwrite(xLightColorQueue, &color);
 }
 
 LEDStrip::~LEDStrip() {
@@ -41,6 +39,10 @@ void LEDStrip::setColor(uint8_t color)
 		TIM5->CCR3 = 2800;
 		GPIOA->ODR |= GPIO_ODR_ODR_3;
 		GPIOA->ODR |= GPIO_ODR_ODR_15;
+	} else if (color == RED_FLASH) {
+		TIM5->CCR3 = 1400;
+		GPIOA->ODR &= ~GPIO_ODR_ODR_3;
+		GPIOA->ODR &= ~GPIO_ODR_ODR_15;
 	} else {
 		TIM5->CCR3 = 0;
 		GPIOA->ODR &= ~GPIO_ODR_ODR_3;
@@ -48,30 +50,5 @@ void LEDStrip::setColor(uint8_t color)
 	}
 }
 
-void LEDStrip::run()
-{
-	uint8_t color = 0;
-	uint8_t movementFlag = SELF_DRIVING;
-	while (1) {
-		if (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_15) == Bit_SET) {
-			if (uxQueueMessagesWaiting(xLightColorQueue) != 0) {
-				xQueueReceive(xLightColorQueue, &color, 0);
-				setColor(color);
-			} else if (movementFlag == MANUAL_CONTROL) {
-				setColor(color);
-				movementFlag = SELF_DRIVING;
-//				xTaskNotifyGive(hyroMotor->taskHandle);    // Give notification(HyroMotTask) EmergencyButt
-			}
-		} else {
-			if (movementFlag == SELF_DRIVING) {
-				GPIOA->ODR &= ~GPIO_ODR_ODR_15;
-				GPIOA->ODR &= ~GPIO_ODR_ODR_3;
-				TIM5->CCR3 = 1400;
-				movementFlag = MANUAL_CONTROL;
-			}
-		}
-		this->taskDelay(oRTOS.fromMsToTick(10));
-	}
-}
 
 

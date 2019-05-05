@@ -20,6 +20,7 @@ USBUserInterface::~USBUserInterface() {
 void USBUserInterface::run()
 {
 	uint8_t answerLength = 0;
+	uint8_t i = 0;
 	uint8_t errStatus = 0;
 	uint8_t histDistArr[RANGEFINDERS_NUMBER] = {0};
 	uint8_t histAngArr[12] = {0};
@@ -36,41 +37,25 @@ void USBUserInterface::run()
 			answerLength = 1;
 
 		} else if (uart6.usartRxArr[0] == SET_COLOR_NUMBER) {
-			xQueueOverwrite(xLightColorQueue, &uart6.usartRxArr[1]);
+			setLEDTask->setColor(uart6.usartRxArr[1]);
 			uart6.usartTxArr[0] = 0;
 			answerLength = 1;
 
 		} else if (uart6.usartRxArr[0] == GET_BATTERY_CHARGE) {
-			xQueueReceive(xBatteryChargeQueue, &uart6.usartTxArr[0], portMAX_DELAY);
+			uart6.usartTxArr[0] = getBatChargeTask->getCharge();
 			answerLength = 1;
 
-		} else if (uart6.usartRxArr[0] == GET_COLLISION_STATUS) {
-			uart6.usartTxArr[RANGEFINDERS_NUMBER + 1] = 0;
-			if (uxQueueMessagesWaiting(xRengefindersHighQueue))
-				for (uint8_t i = 0; i < RANGEFINDERS_NUMBER; i++)
-					xQueueReceive(xRengefindersHighQueue, &histDistArr[i], portMAX_DELAY);
-			for (uint8_t i = 0; i < RANGEFINDERS_NUMBER; i++)
-				uart6.usartTxArr[i] = histDistArr[i];
+		} else if (uart6.usartRxArr[0] == GET_DISTANCE) {
+			sensorTask->getDistance(uart6.usartTxArr);
 			answerLength = RANGEFINDERS_NUMBER;
 			hyroMotor->clearWheelStatus();
 
 		} else if (uart6.usartRxArr[0] == SEND_RS485) {			// Send to RS485 -----
-			if (uxQueueMessagesWaiting(xHighLvlQueue))
-				xQueueReset(xHighLvlQueue);
-			for (uint8_t i = 1; i < 9; i++)
-				xQueueSend(xHighLvlQueue, &uart6.usartRxArr[i], portMAX_DELAY);
-			uart6.usartTxArr[0] = SEND_RS485;
+			hyroMotor->setSpeed(&(uart6.usartRxArr[1]));
 			answerLength = 1;
 
 		} else if (uart6.usartRxArr[0] == RECEIVE_RS485) {		// Receive from RS485 -----
-			uart6.usartTxArr[12] = 0;
-			if (uxQueueMessagesWaiting(xAngleQueue))
-				for (uint8_t i = 0; i < 12; i++)
-					xQueueReceive(xAngleQueue, &histAngArr[i], portMAX_DELAY);
-			for (uint8_t i = 0; i < 12; i++) {
-				uart6.usartTxArr[i] = histAngArr[i];
-				uart6.usartTxArr[12] += uart6.usartTxArr[i];
-			}
+			hyroMotor->getOdometry(uart6.usartTxArr);
 			answerLength = 12;
 
 		} else {
@@ -79,8 +64,8 @@ void USBUserInterface::run()
 			answerLength = 1;
 		}
 //		uart6.usartTxArr[answerLength] = hyroMotor->getWheelStatus();
-		uart6.usartTxArr[answerLength] =0;
-		for (uint8_t i = 0; i < answerLength; i++)
+		uart6.usartTxArr[answerLength] = 0;
+		for (i = 0; i < answerLength; i++)
 			uart6.usartTxArr[answerLength] += uart6.usartTxArr[i];
 		uart6.send(uart6.usartTxArr, ++answerLength);
 	}

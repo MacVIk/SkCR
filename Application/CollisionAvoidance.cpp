@@ -13,9 +13,10 @@ uint16_t sensTimeArr[RANGEFINDERS_NUMBER];
 
 CollisionAvoidance::CollisionAvoidance()
 {
-	xRengefindersHighQueue = xQueueCreate(RANGEFINDERS_NUMBER, sizeof(uint8_t));
-	xRengefindersLowQueue = xQueueCreate(RANGEFINDERS_NUMBER, sizeof(uint8_t));
-	xRengefindersMutex = xSemaphoreCreateMutex();
+//	xRengefindersHighQueue = xQueueCreate(RANGEFINDERS_NUMBER, sizeof(uint8_t));
+//	xRengefindersLowQueue = xQueueCreate(RANGEFINDERS_NUMBER, sizeof(uint8_t));
+	xTaskToNotify = 0;
+	this->xRengefindersMutex = xSemaphoreCreateMutex();
 	for (uint8_t i = 0; i < RANGEFINDERS_NUMBER; i++)
 		this->sensDistArr[i] = new uint8_t[15];					//create array for distance history
 }
@@ -74,6 +75,12 @@ void CollisionAvoidance::calculateDistanceQsort(uint8_t* distArr, uint8_t i)
 		distArr[0] = median;
 }
 
+void CollisionAvoidance::getDistance(uint8_t* distArr)
+{
+	for (uint8_t i = 0; i < RANGEFINDERS_NUMBER; i++)
+		distArr[i] = this->outDistArr[i];
+}
+
 void CollisionAvoidance::run()
 {
 	InitUser.OnePulseModeInit();
@@ -81,20 +88,18 @@ void CollisionAvoidance::run()
 
 	while(1) {
 		xLastWakeTime = xTaskGetTickCount();
-		xSemaphoreTake(xRengefindersMutex, portMAX_DELAY);
-		if (uxQueueMessagesWaiting(xRengefindersHighQueue) != 0)
-			xQueueReset(xRengefindersHighQueue);
-		if (uxQueueMessagesWaiting(xRengefindersLowQueue) != 0)
-			xQueueReset(xRengefindersHighQueue);
-		for (uint8_t i = 0; i < RANGEFINDERS_NUMBER; i++) {
+
+		for (uint8_t i = 0; i < RANGEFINDERS_NUMBER; i++)
 			calculateDistanceQsort(sensDistArr[i], i);
-			xQueueSend(xRengefindersHighQueue, &sensDistArr[i][0], 10);
-			xQueueSend(xRengefindersLowQueue, &sensDistArr[i][0], 10);
-		}
+
+		xSemaphoreTake(xRengefindersMutex, portMAX_DELAY);
+		for (uint8_t i = 0; i < RANGEFINDERS_NUMBER; i++)
+			this->outDistArr[i] = sensDistArr[i][0];
 		xSemaphoreGive(xRengefindersMutex);
-		xTaskNotifyGive(collisionHandler->xTaskToNotify);
+
 		TIM_SetCounter(TIM10, 0);								//  Reload timer to generate trigger signal.
 		TIM_SetCounter(TIM6, 0);
+		xTaskNotifyGive(this->xTaskToNotify);
 		taskDelayUntil(&xLastWakeTime, oRTOS.fromMsToTick(MIN_RESPONCE_TIME));
 	}
 }

@@ -13,8 +13,7 @@
 #include "semphr.h"
 #include "QueueCreator.h"
 #include "task.h"
-
-#define RANGEFINDERS_NUMBER ((uint8_t)6)
+#include "CollisionAvoidance.h"
 
 class CollisionHandler: public iActiveObject {
 public:
@@ -22,7 +21,6 @@ public:
 	virtual ~CollisionHandler();
 	bool getStatus();
 	void run();
-	TaskHandle_t xTaskToNotify;
 private:
 	bool rColFlag;
 };

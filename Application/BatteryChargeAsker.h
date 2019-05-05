@@ -23,10 +23,10 @@ class BatteryChargeAsker: public iActiveObject
 public:
 	BatteryChargeAsker();
 	virtual ~BatteryChargeAsker();
+	uint8_t getCharge();
 	void run();
-	void writeToQueue(uint8_t &data);
-	void readFromQueue(uint8_t &bufferToWrite);
 private:
+	uint8_t ChargeVal_P;
 };
 
 extern BatteryChargeAsker* getBatChargeTask;

@@ -14,6 +14,7 @@
 #include "UARTuserInit.h"
 #include "arm_math.h"
 #include <math.h>
+#include "LEDStrip.h"
 #include "CollisionHandler.h"
 
 #ifndef HYROMOTOR_H_
@@ -90,7 +91,6 @@ class HyroMotor: public iActiveObject
 public:
 	HyroMotor();
 	virtual ~HyroMotor();
-	void run();
 	void delayPort(uint32_t ticks);
 	void taskNotifyFromISR(BaseType_t xHigherPriorityTaskWoken);
 	void switchPin();
@@ -98,12 +98,18 @@ public:
 	void calculateXYAlf(int32_t* whArr, int32_t* whHistArr, float32_t* robArr);
 	uint8_t getWheelStatus();
 	void clearWheelStatus();
+	void setSpeed(uint8_t* byteArr);
+	void getOdometry(uint8_t* byteArr);
 	void motorInit(uint8_t idid2set);
-	bool highLvlFlag;
+	void run();
 	uint8_t* rxRsDataArr[2];
 private:
+	SemaphoreHandle_t xHighLvlMutex;
 	TaskHandle_t xTaskToNotify;
 	UARTtoRS485* motArr[2];
+	uint8_t rByteArr[8];
+	uint8_t tByteArr[12];
+	bool hlFlag;
 	bool txFlag;
 	bool rxFlag;
 	bool aknFlag;
