@@ -42,12 +42,13 @@ int main(void)
 	InitUser.ADCInit();
 	InitUser.InterruptInit();
 	InitUser.TIMInit();
+	setLEDTask->setColor(BLUE);
 
 	getBatChargeTask->taskCreate(256, 2, "getBatCharge");
 	sensorTask->taskCreate(512, 3, "sensorTask");
 	hyroMotor->taskCreate(1024, 4, "hyroMotorTask");
 	usbUserInterface->taskCreate(512, 4, "UserUARTtoUSB");
-	collisionHandler->taskCreate(1024, 4, "CollisionHandler");
+	collisionHandler->taskCreate(512, 4, "CollisionHandler");
 //	moveTask->taskCreate(512,3,"moveTask");
 //	readEncoders->taskCreate(512,3,"readEncoders");
 //	setMotTask->taskCreate(600, 3, "setMotTask");

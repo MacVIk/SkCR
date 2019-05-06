@@ -14,6 +14,7 @@
 #include "QueueCreator.h"
 #include "task.h"
 #include "CollisionAvoidance.h"
+#include "LEDStrip.h"
 
 class CollisionHandler: public iActiveObject {
 public:

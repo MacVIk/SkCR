@@ -4,6 +4,8 @@
  *  Created on: 11.03.2019
  *      Author: Taras.Melnik
  */
+#ifndef HYROMOTOR_H_
+#define HYROMOTOR_H_
 
 #include "iActiveObject.h"
 #include "QueueCreator.h"
@@ -16,9 +18,6 @@
 #include <math.h>
 #include "LEDStrip.h"
 #include "CollisionHandler.h"
-
-#ifndef HYROMOTOR_H_
-#define HYROMOTOR_H_
 
 //*************Modbus_Functions*************
 
@@ -96,8 +95,8 @@ public:
 	void switchPin();
 	void robotSpeed2WheelSpeed(float* hDatArr, int16_t* whArr);
 	void calculateXYAlf(int32_t* whArr, int32_t* whHistArr, float32_t* robArr);
-	uint8_t getWheelStatus();
-	void clearWheelStatus();
+	bool getWhCurColStatus();
+	bool getWhPowStatus();
 	void setSpeed(uint8_t* byteArr);
 	void getOdometry(uint8_t* byteArr);
 	void motorInit(uint8_t idid2set);
@@ -113,7 +112,8 @@ private:
 	bool txFlag;
 	bool rxFlag;
 	bool aknFlag;
-	uint8_t errStatus;
+	bool powFlag;
+	bool curColFlag;
 };
 
 extern HyroMotor* hyroMotor;

@@ -18,10 +18,17 @@ HyroMotor::HyroMotor() {
 //	xAngleMutex = xSemaphoreCreateMutex();
 //	xHighLvlQueue = xQueueCreate(8, sizeof(uint8_t));
 	xHighLvlMutex = xSemaphoreCreateMutex();
+	xTaskToNotify = 0;
 	motArr[0] = &motor1;
 	motArr[1] = &motor2;
 	for (uint8_t i = 0; i < 2; i++)
 		this->rxRsDataArr[i] = new uint8_t[4];
+	this->rxFlag = false;
+	this->txFlag = false;
+	this->aknFlag = true;
+	this->hlFlag = false;
+	this->powFlag = true;
+	this->curColFlag = false;
 }
 
 HyroMotor::~HyroMotor() {
@@ -95,15 +102,18 @@ void HyroMotor::calculateXYAlf(int32_t* whArr, int32_t* whHistArr, float32_t* xy
 	}
 }
 
-uint8_t HyroMotor::getWheelStatus()
+bool HyroMotor::getWhCurColStatus()
 {
-	return errStatus;
+	bool buff = this->curColFlag;
+	this->curColFlag = false;
+	return buff;
 }
 
-void HyroMotor::clearWheelStatus()
+bool HyroMotor::getWhPowStatus()
 {
-	if (this->errStatus == WHEEL_COLLISION)
-		errStatus = WHEEL_OK;
+	bool buff = this->powFlag;
+	this->powFlag = false;
+	return buff;
 }
 
 void HyroMotor::setSpeed(uint8_t* byteArr)
@@ -147,7 +157,6 @@ void HyroMotor::motorInit(uint8_t id2set)
 	delayPort(4);
 	motArr[id2set - 1]->modbusReadReg(id2set, REG_READ_ANGLE_LOW, 2);
 	delayPort(4);
-
 }
 
 void HyroMotor::run()
@@ -172,11 +181,7 @@ void HyroMotor::run()
 	vTaskDelay(oRTOS.fromMsToTick(5000));
 	this->motorInit(1);
 	this->motorInit(2);
-	this->rxFlag = false;
-	this->txFlag = false;
-	this->aknFlag = true;
-	this->hlFlag = false;
-	this->errStatus = WHEEL_POWER_OFF;
+	this->powFlag = false;
 
 	while (1) {
 		ulTaskNotifyTake(pdTRUE, oRTOS.fromMsToTick(4));
@@ -212,13 +217,13 @@ void HyroMotor::run()
 							motArr[i]->modbusWriteReg(i + 1, REG_SET_SPEED, STOP_MOTION);
 							ulTaskNotifyTake(pdTRUE, oRTOS.fromMsToTick(4));
 						}
-						this->errStatus = WHEEL_COLLISION;
+						this->curColFlag = true;
 						setLEDTask->setColor(RED);
 						vTaskDelay(oRTOS.fromMsToTick(500));
 						motorInit(1);
 						motorInit(2);
 					}
-					this->errStatus = WHEEL_OK;
+//					this->curColFlag = false;
 					curCom = REG_READ_ANGLE_LOW;
 					for (i = 0; i < 2; i++)
 						motArr[i]->modbusReadReg(i + 1, curCom, 2);
@@ -244,7 +249,7 @@ void HyroMotor::run()
 				}
 			}
 		} else {
-			this->errStatus = WHEEL_POWER_OFF;
+			this->powFlag = true;
 			ulTaskNotifyTake(pdTRUE, oRTOS.fromMsToTick(1000));
 			if (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_15)) {				// check if stopButtom is pressed
 				for (i = 0; i < 2; i++)
@@ -253,20 +258,21 @@ void HyroMotor::run()
 			} else {
 				while(GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_15) == 0) {
 					vTaskDelay(oRTOS.fromMsToTick(100));
-					setLEDTask->setColor(RED_FLASH);
-					this->errStatus = WHEEL_POWER_OFF;
+					setLEDTask->setError();
+					this->powFlag = true;
 				}
-				vTaskDelay(oRTOS.fromMsToTick(2000));
+				vTaskDelay(oRTOS.fromMsToTick(3000));
 				for (i = 0; i < 2; i++) {
 					whAngleHistArr[i] = 0;									// for correct calculation
 					motorInit(i + 1);
 				}
-				setLEDTask->setColor(BLUE);
-				this->errStatus = WHEEL_OK;
+				setLEDTask->clearError();
+//				this->powFlag = false;
+//				vTaskDelay(oRTOS.fromMsToTick(1000));
+//				setLEDTask->setColor(BLUE);
 			}
 		}
 	}
-//	GPIO_ResetBits(GPIOC, GPIO_Pin_14);
 }
 
 extern "C"

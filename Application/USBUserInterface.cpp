@@ -24,6 +24,7 @@ void USBUserInterface::run()
 	uint8_t errStatus = 0;
 	uint8_t histDistArr[RANGEFINDERS_NUMBER] = {0};
 	uint8_t histAngArr[12] = {0};
+	uint8_t errByte = 0;
 
 	this->xTaskToNotify = xTaskGetCurrentTaskHandle();
 	uart6.uartInit(GPIOC, USART6, false);
@@ -48,7 +49,6 @@ void USBUserInterface::run()
 		} else if (uart6.usartRxArr[0] == GET_DISTANCE) {
 			sensorTask->getDistance(uart6.usartTxArr);
 			answerLength = RANGEFINDERS_NUMBER;
-			hyroMotor->clearWheelStatus();
 
 		} else if (uart6.usartRxArr[0] == SEND_RS485) {			// Send to RS485 -----
 			hyroMotor->setSpeed(&(uart6.usartRxArr[1]));
@@ -63,8 +63,15 @@ void USBUserInterface::run()
 			uart6.usartTxArr[1] = uart6.usartTxArr[0];
 			answerLength = 1;
 		}
-//		uart6.usartTxArr[answerLength] = hyroMotor->getWheelStatus();
-		uart6.usartTxArr[answerLength] = 0;
+		errByte = 0;
+		if (hyroMotor->getWhPowStatus())
+			errByte |= 1;
+		if (hyroMotor->getWhCurColStatus())
+			errByte |= 1 << 1;
+		if (collisionHandler->getStatus())
+			errByte |= 1 << 2;
+		uart6.usartTxArr[answerLength] = errByte;
+		uart6.usartTxArr[++answerLength] = 0;
 		for (i = 0; i < answerLength; i++)
 			uart6.usartTxArr[answerLength] += uart6.usartTxArr[i];
 		uart6.send(uart6.usartTxArr, ++answerLength);

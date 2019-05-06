@@ -29,8 +29,9 @@ void CollisionHandler::run() {
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 		sensorTask->getDistance(distArr);
 		for (uint8_t i = 0; i < RANGEFINDERS_NUMBER; i++) {
-			if (distArr[i] < 10) {
+			if (distArr[i] < 15) {
 				this->rColFlag = true;
+				setLEDTask->setColor(RED);
 				break;
 			} else
 				this->rColFlag = false;

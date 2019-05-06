@@ -28,7 +28,11 @@ public:
 	LEDStrip();
 	virtual ~LEDStrip();
 	void setColor(uint8_t color);
+	void setError();
+	void clearError();
 	void run();
+private:
+	bool errFlag;
 };
 
 extern LEDStrip* setLEDTask;

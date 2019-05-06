@@ -18,7 +18,7 @@ CollisionAvoidance::CollisionAvoidance()
 	xTaskToNotify = 0;
 	this->xRengefindersMutex = xSemaphoreCreateMutex();
 	for (uint8_t i = 0; i < RANGEFINDERS_NUMBER; i++)
-		this->sensDistArr[i] = new uint8_t[15];					//create array for distance history
+		this->sensDistArr[i] = new uint8_t[10];					//create array for distance history
 }
 
 CollisionAvoidance::~CollisionAvoidance(){
@@ -65,13 +65,13 @@ void CollisionAvoidance::calculateDistanceQsort(uint8_t* distArr, uint8_t i)
 		distArr[0] = 0xff;
 	else
 		distArr[0] = (sensTimeArr[i] - 500) / 56;
-	uint8_t sortArr[15];
-	for (uint8_t j = 0; j < 15; j++)
+	uint8_t sortArr[10];
+	for (uint8_t j = 0; j < 10; j++)
 		sortArr[j] = distArr[j];
-	median = quick_select(sortArr, 0, 15, 7);
-	for (uint8_t j = 14; j > 0; j--)
+	median = quick_select(sortArr, 0, 10, 5);
+	for (uint8_t j = 9; j > 0; j--)
 		distArr[j] = distArr[j - 1];
-	if ((median - distArr[0] > 7) || (median - distArr[0] < -7))
+	if ((median - distArr[0] > 5) || (median - distArr[0] < -5))
 		distArr[0] = median;
 }
 
