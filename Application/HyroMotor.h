@@ -8,7 +8,6 @@
 #define HYROMOTOR_H_
 
 #include "iActiveObject.h"
-#include "QueueCreator.h"
 #include "stm32f4xx.h"
 #include "stm32f4xx_conf.h"
 #include "semphr.h"

@@ -30,8 +30,9 @@ enum {
 	SET_COLOR_NUMBER				= 0x07,
 	GET_BATTERY_CHARGE				= 0x08,
 	SEND_RS485						= 0x09,
-	GET_DISTANCE					= 0X0A,
-	RECEIVE_RS485					= 0X0B
+	GET_DISTANCE					= 0x0A,
+	RECEIVE_RS485					= 0x0B,
+	RECEIVE_IMU						= 0x0C
 //	FLAG
 };
 

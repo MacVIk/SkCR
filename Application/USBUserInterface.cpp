@@ -21,7 +21,6 @@ void USBUserInterface::run()
 {
 	uint8_t answerLength = 0;
 	uint8_t i = 0;
-	uint8_t errStatus = 0;
 	uint8_t histDistArr[RANGEFINDERS_NUMBER] = {0};
 	uint8_t histAngArr[12] = {0};
 	uint8_t errByte = 0;
@@ -31,7 +30,6 @@ void USBUserInterface::run()
 
 	while(1) {
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-		errStatus = 0;
 
 		if (uart6.usartRxArr[0] == ECHO) {
 			uart6.usartTxArr[0] = 0x11;
@@ -54,9 +52,13 @@ void USBUserInterface::run()
 			hyroMotor->setSpeed(&(uart6.usartRxArr[1]));
 			answerLength = 1;
 
-		} else if (uart6.usartRxArr[0] == RECEIVE_RS485) {		// Receive from RS485 -----
+		} else if (uart6.usartRxArr[0] == RECEIVE_RS485) {		// Receive from RS485 ----- (x, y, theta)
 			hyroMotor->getOdometry(uart6.usartTxArr);
 			answerLength = 12;
+
+		} else if (uart6.usartRxArr[0] == RECEIVE_IMU) {		// Receive from IMU ----- (x, y, theta)
+			imuSensor->getOdometry(uart6.usartTxArr);
+			answerLength = 6;
 
 		} else {
 			uart6.usartTxArr[0] = 0xff;

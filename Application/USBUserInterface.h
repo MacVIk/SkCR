@@ -19,6 +19,7 @@
 #include "task.h"
 #include "HyroMotor.h"
 #include "UARTuserInit.h"
+#include "ImuSensor.h"
 
 
 class USBUserInterface: public iActiveObject {

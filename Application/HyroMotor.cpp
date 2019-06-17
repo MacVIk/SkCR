@@ -139,7 +139,7 @@ void HyroMotor::motorInit(uint8_t id2set)
 	delayPort(4);
 	motArr[id2set - 1]->modbusWriteReg(id2set, REG_S_PID_D, 0);
 	delayPort(4);
-	motArr[id2set - 1]->modbusWriteReg(id2set, REG_I_CUTOFF, 1500);
+	motArr[id2set - 1]->modbusWriteReg(id2set, REG_I_CUTOFF, 3000);
 	delayPort(4);
 	motArr[id2set - 1]->modbusWriteReg(id2set, REG_V_CUTOFF, 10000);
 	delayPort(4);
@@ -147,7 +147,7 @@ void HyroMotor::motorInit(uint8_t id2set)
 	delayPort(4);
 	motArr[id2set - 1]->modbusWriteReg(id2set, REG_PWM_LIMIT, 230);
 	delayPort(4);
-	motArr[id2set - 1]->modbusWriteReg(id2set, REG_S_PID_I_LIMIT, 2500);
+	motArr[id2set - 1]->modbusWriteReg(id2set, REG_S_PID_I_LIMIT, 2000);
 	delayPort(4);
 	motArr[id2set - 1]->modbusWriteReg(id2set, REG_A_PID_I_LIMIT, 2000);
 	delayPort(4);
@@ -201,7 +201,7 @@ void HyroMotor::run()
 				robotSpeed2WheelSpeed(robotSpeed, wheelSpeed);
 				motor1.modbusWriteReg(1, REG_SET_SPEED, wheelSpeed[0]);
 				motor2.modbusWriteReg(2, REG_SET_SPEED, wheelSpeed[1]);
-				curCom = REG_ERROR_CODE;
+				curCom = REG_SET_SPEED;
 			} else {
 				motor1.modbusReadData(rxRsDataArr[0], length);
 				motor2.modbusReadData(rxRsDataArr[1], length);
@@ -209,9 +209,14 @@ void HyroMotor::run()
 				txFlag = false;
 				rxFlag = false;
 
-				if (curCom == REG_ERROR_CODE) {
+				if (curCom == REG_SET_SPEED) {
+					curCom = REG_READ_ANGLE_LOW;
+					for (i = 0; i < 2; i++)
+						motArr[i]->modbusReadReg(i + 1, curCom, 2);
+
+				} else if (curCom == REG_ERROR_CODE) {
 					int16_t errBuff1 = motor1.uint8toInt16(rxRsDataArr[0]);
-					int16_t errBuff2 = motor1.uint8toInt16(rxRsDataArr[1]);
+					int16_t errBuff2 = motor2.uint8toInt16(rxRsDataArr[1]);
 					if (errBuff1 != 0 || errBuff2 != 0) {
 						for (i = 0; i < 2; i++) {
 							motArr[i]->modbusWriteReg(i + 1, REG_SET_SPEED, STOP_MOTION);
@@ -219,7 +224,7 @@ void HyroMotor::run()
 						}
 						this->curColFlag = true;
 						setLEDTask->setColor(RED);
-						vTaskDelay(oRTOS.fromMsToTick(500));
+						vTaskDelay(oRTOS.fromMsToTick(1000));
 						motorInit(1);
 						motorInit(2);
 					}
@@ -243,9 +248,26 @@ void HyroMotor::run()
 					xSemaphoreTake(xHighLvlMutex, portMAX_DELAY);
 					memcpy(tByteArr, xyalfArr, sizeof(tByteArr));	// x, y, alf in global system
 					xSemaphoreGive(xHighLvlMutex);
-					curCom = REG_ERROR_CODE;
+					curCom = REG_READ_CURRENT;
 					for (i = 0; i < 2; i++)
 						motArr[i]->modbusReadReg(i + 1, curCom, 1);
+
+				} else if (curCom == REG_READ_CURRENT) {
+					for (i = 0; i < 2; i++) {
+						int16_t curVal = motor1.uint8toInt16(rxRsDataArr[i]);
+						if (curVal >= 1000 || curColFlag)
+							this->curColFlag = true;
+					}
+					if (curColFlag) {
+						curCom = REG_SET_SPEED;
+						motor1.modbusWriteReg(1, REG_SET_SPEED, 0);
+						motor2.modbusWriteReg(2, REG_SET_SPEED, 0);
+						setLEDTask->setColor(RED);
+					} else {
+						curCom = REG_ERROR_CODE;
+						for (i = 0; i < 2; i++)
+							motArr[i]->modbusReadReg(i + 1, curCom, 1);
+					}
 				}
 			}
 		} else {
