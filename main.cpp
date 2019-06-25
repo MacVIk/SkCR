@@ -51,7 +51,7 @@ int main(void)
 	hyroMotor->taskCreate(1024, 4, "hyroMotorTask");
 	usbUserInterface->taskCreate(512, 4, "UserUARTtoUSB");
 	collisionHandler->taskCreate(512, 4, "CollisionHandler");
-//	imuSensor->taskCreate(512, 3, "imuSensorTask");
+	imuSensor->taskCreate(512, 3, "imuSensorTask");
 
 //	moveTask->taskCreate(512,3,"moveTask");
 //	readEncoders->taskCreate(512,3,"readEncoders");

@@ -117,30 +117,124 @@ void ImuSensor::i2cWrite(uint8_t slaveAdr, uint8_t subRegAdr, uint8_t data)
 
 void ImuSensor::accelInit()
 {
-	uint8_t cr1Reg = 0b00101111;
-	this->i2cWrite(ACCELEROMETER_ADRR, ACCELEROMETER_CTRL_REG1, cr1Reg);
+	this->i2cWrite(ACCELEROMETER_ADDR, ACCELEROMETER_CTRL_REG1_ADDR, ACCELEROMETER_CTRL_REG1_MASK);
 }
 
-int16_t ImuSensor::uint8toInt16(uint8_t* arr)
+void ImuSensor::gyroInit()
 {
-	int16_t dtb = 0;
-	dtb |= ((int16_t) arr[0]) << 8;
-	dtb |= 0xffff & arr[1];
-	return dtb;
+	this->i2cWrite(GYROSCOPE_ADDR, GYROSCOPE_CTRL_REG1_ADDR, GYROSCOPE_CTRL_REG1_MASK);
 }
+
+void ImuSensor::magnetInit()
+{
+	this->i2cWrite(MAGNETOMETER_ADDR, MAGNETOMETER_CTRL_REG1_ADDR, MAGNETOMETER_CTRL_REG1_MASK);
+	this->i2cWrite(MAGNETOMETER_ADDR, MAGNETOMETER_CTRL_REG2_ADDR, MAGNETOMETER_CTRL_REG2_MASK);
+	this->i2cWrite(MAGNETOMETER_ADDR, MAGNETOMETER_CTRL_REG3_ADDR, MAGNETOMETER_CTRL_REG3_MASK);
+}
+
+void ImuSensor::accelAdjustment(int16_t* aConst)
+{
+	int32_t* accArr[3];
+	int16_t adjArr[3] = {0};
+	for (uint8_t i = 0; i < 3; i++) {
+		accArr[i] = new int32_t[20];
+		for (uint8_t j = 0; j < 20; j++)
+			accArr[i][j] = 0;
+	}
+	for (uint8_t j = 1; j < 20; j++) {
+		this->i2cRead(ACCELEROMETER_ADDR, ACCELEROMETER_OUT_X_L | 1 << 7, 6, i2cRxArr);
+		memcpy(adjArr, i2cRxArr, sizeof(adjArr));
+		for (uint8_t i = 0; i < 3; i++)
+			accArr[i][j] = accArr[i][j - 1] + adjArr[i];
+		vTaskDelay(oRTOS.fromMsToTick(10));
+	}
+	for (uint8_t i = 0; i < 3; i++)
+		aConst[i] = (int16_t) (accArr[i][19] / 19);
+}
+
+void ImuSensor::gyroAdjustment(int16_t* aConst)
+{
+	int32_t* accArr[3];
+	int16_t adjArr[3] = {0};
+	for (uint8_t i = 0; i < 3; i++) {
+		accArr[i] = new int32_t[20];
+		for (uint8_t j = 0; j < 20; j++)
+			accArr[i][j] = 0;
+	}
+	for (uint8_t j = 1; j < 20; j++) {
+		this->i2cRead(GYROSCOPE_ADDR, GYROSCOPE_OUT_X_L | 1 << 7, 6, i2cRxArr);
+		memcpy(adjArr, i2cRxArr, sizeof(adjArr));
+		for (uint8_t i = 0; i < 3; i++)
+			accArr[i][j] = accArr[i][j - 1] + adjArr[i];
+		vTaskDelay(oRTOS.fromMsToTick(10));
+	}
+	for (uint8_t i = 0; i < 3; i++)
+		aConst[i] = (int16_t) (accArr[i][19] / 19);
+}
+
+void ImuSensor::calculateXYTheta(float32_t* vArr, float32_t* xyalfArr)
+{
+	static float32_t deltAlf = 0;
+	static float32_t deltDist = 0;
+	static float32_t cBuff = 2 * PI;
+
+	deltDist = vArr[0] * 0.001f;
+	deltAlf = vArr[1];
+	if (deltAlf < 5 && deltAlf > -5 && deltDist < 0.1 && deltDist > -0.1) { 						// fix an incorrect answer during shutdown
+		xyalfArr[2] += deltAlf;
+		if (xyalfArr[2] >= cBuff){								//lead to the 2pi range (for ARM tables)
+			xyalfArr[2] -= cBuff;
+		} else if (xyalfArr[2] <= -cBuff)
+			xyalfArr[2] += cBuff;
+		xyalfArr[1] += deltDist * arm_sin_f32(xyalfArr[2]);
+		xyalfArr[0] += deltDist * arm_cos_f32(xyalfArr[2]);
+	}
+}
+
+
 
 void ImuSensor::run() {
-	uint8_t dataI2c = 0;
-	int16_t aXYZ[3] = {0};
-	float32_t aXYZf[3] = {0	};
-	float32_t multConst = 2.f / 32767.f;
+	float32_t velArr[2] = {0};
+	float32_t velHistArr[2] = {0};
+	float32_t xyThetArr[3] = {0};
+	float32_t constAcc = 2.f * 9.8f / 32767.f;
+	float32_t constGyro = 0.0875f / 57.3f;
+	int16_t testArr[3] = {0};
+	int16_t cArr[3] = {0};
+	int16_t wArr[3] = {0};
 	this->accelInit();
+	this->gyroInit();
+	this->accelAdjustment(cArr);
+	this->gyroAdjustment(wArr);
 
 	 while (1) {
-		 this->i2cRead(ACCELEROMETER_ADRR, ACCELEROMETER_OUT_X_L | 1 << 7, 6, i2cRxArr);
-		 memcpy(aXYZ, i2cRxArr, sizeof(aXYZ));
+		 int16_t bufI2c = 0;
+		 this->i2cRead(ACCELEROMETER_ADDR, ACCELEROMETER_OUT_Y_L | 1 << 7, 2, i2cRxArr);
+		 memcpy(&bufI2c, i2cRxArr, sizeof(bufI2c));
+		 velArr[0] += (bufI2c - cArr[1]) * constAcc * 0.001f;
+		 this->i2cRead(GYROSCOPE_ADDR, GYROSCOPE_OUT_Z_L | 1 << 7, 2, i2cRxArr);
+		 memcpy(&bufI2c, i2cRxArr, sizeof(bufI2c));
+		 velArr[1] = (bufI2c - wArr[2]) * constGyro * 0.001f;
+		 calculateXYTheta(velArr, xyThetArr);
+		 memcpy(tByteArr, xyThetArr, sizeof(tByteArr));
+		 vTaskDelay(oRTOS.fromMsToTick(10));
 
-		 vTaskDelay(10);
+//		 // Test for angularVelocities
+//		 this->i2cRead(GYROSCOPE_ADDR, GYROSCOPE_OUT_X_L | 1 << 7, 6, i2cRxArr);
+//		 memcpy(testArr, i2cRxArr, sizeof(testArr));
+//		 for (uint8_t i = 0; i < 3; i++)
+//			 xyThetArr[i] += (testArr[i] - wArr[i]) * constGyro * 0.001f;
+//		 memcpy(tByteArr, xyThetArr, sizeof(tByteArr));
+//		 vTaskDelay(oRTOS.fromMsToTick(10));
+
+//		 // Test for accelerations
+//		 int16_t bufI2c = 0;
+//		 this->i2cRead(ACCELEROMETER_ADDR, ACCELEROMETER_OUT_X_L | 1 << 7, 6, i2cRxArr);
+//		 memcpy(testArr, i2cRxArr, sizeof(testArr));
+//		 for (uint8_t i = 0; i < 3; i++)
+//			 xyThetArr[i] += (testArr[i] - cArr[i]) * constAcc * 0.001f;
+//		 memcpy(tByteArr, xyThetArr, sizeof(tByteArr));
+//		 vTaskDelay(oRTOS.fromMsToTick(10));
 	 }
 }
 

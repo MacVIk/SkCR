@@ -58,7 +58,7 @@ void USBUserInterface::run()
 
 		} else if (uart6.usartRxArr[0] == RECEIVE_IMU) {		// Receive from IMU ----- (x, y, theta)
 			imuSensor->getOdometry(uart6.usartTxArr);
-			answerLength = 6;
+			answerLength = 12;
 
 		} else {
 			uart6.usartTxArr[0] = 0xff;
