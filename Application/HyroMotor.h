@@ -16,7 +16,6 @@
 #include "arm_math.h"
 #include <math.h>
 #include "LEDStrip.h"
-#include "CollisionHandler.h"
 
 //*************Modbus_Functions*************
 

@@ -31,11 +31,12 @@ public:
 	uint8_t quick_select(uint8_t* input, uint8_t p, uint8_t r, uint8_t k);
 	void calculateDistanceQsort(uint8_t* distArr, uint8_t i);
 	void getDistance(uint8_t* distArr);
+	bool getStatus();
 	void run();
 //	QueueHandle_t xCollisionAvoidanceQueue;
 	SemaphoreHandle_t xRengefindersMutex;
-	TaskHandle_t xTaskToNotify;
 private:
+	bool rColFlag;
 	uint8_t outDistArr[RANGEFINDERS_NUMBER];
 	uint8_t  *sensDistArr[RANGEFINDERS_NUMBER];
 };

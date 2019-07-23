@@ -60,6 +60,14 @@ void USBUserInterface::run()
 			imuSensor->getOdometry(uart6.usartTxArr);
 			answerLength = 12;
 
+		} else if (uart6.usartRxArr[0] == RECEIVE_ACCELERATION) {	// Receive from IMU ----- (ax, ay, az)
+			imuSensor->getAcceleration(uart6.usartTxArr);
+			answerLength = 24;
+
+		} else if (uart6.usartRxArr[0] == RECEIVE_ANGULAR_VELOCITY) {	// Receive from IMU ----- (wx, wy, wz)
+			imuSensor->getAngularVel(uart6.usartTxArr);
+			answerLength = 24;
+
 		} else {
 			uart6.usartTxArr[0] = 0xff;
 			uart6.usartTxArr[1] = uart6.usartTxArr[0];
@@ -70,7 +78,7 @@ void USBUserInterface::run()
 			errByte |= 1;
 		if (hyroMotor->getWhCurColStatus())
 			errByte |= 1 << 1;
-		if (collisionHandler->getStatus())
+		if (sensorTask->getStatus())
 			errByte |= 1 << 2;
 		uart6.usartTxArr[answerLength] = errByte;
 		uart6.usartTxArr[++answerLength] = 0;

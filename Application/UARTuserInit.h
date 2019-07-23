@@ -23,8 +23,8 @@ public:
 	void send(uint8_t* sendArr, uint8_t length);
 	uint8_t receiveByte(uint8_t &byte);
 	void resetPointer();
-	uint8_t usartRxArr[20];
-	uint8_t usartTxArr[20];
+	uint8_t usartRxArr[64];
+	uint8_t usartTxArr[64];
 private:
 //	USART_TypeDef* nvicUart;
 	GPIO_TypeDef* nvicPort;

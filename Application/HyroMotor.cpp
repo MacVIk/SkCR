@@ -191,13 +191,14 @@ void HyroMotor::run()
 				xSemaphoreTake(xHighLvlMutex, portMAX_DELAY);
 				memcpy(robotSpeed, rByteArr, sizeof(robotSpeed));
 				xSemaphoreGive(xHighLvlMutex);
-				if (collisionHandler->getStatus() && robotSpeed[0] > 0) {
-					setLEDTask->setColor(RED);
-					robotSpeed[0] = 0;
-				} else if (robotSpeed[0] || robotSpeed[1]) {
-					setLEDTask->setColor(BLUE);
-				} else
-					setLEDTask->setColor(GREEN);
+//				if (collisionHandler->getStatus() && robotSpeed[0] > 0) {
+//					setLEDTask->setColor(RED);
+//					robotSpeed[0] = 0;
+//				}
+//				} else if (robotSpeed[0] || robotSpeed[1]) {
+//					setLEDTask->setColor(BLUE);
+//				} else
+//					setLEDTask->setColor(GREEN);
 				robotSpeed2WheelSpeed(robotSpeed, wheelSpeed);
 				motor1.modbusWriteReg(1, REG_SET_SPEED, wheelSpeed[0]);
 				motor2.modbusWriteReg(2, REG_SET_SPEED, wheelSpeed[1]);
