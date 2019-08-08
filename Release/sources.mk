@@ -27,12 +27,8 @@ CPP_DEPS :=
 
 # Every subdirectory with source files must be described here
 SUBDIRS := \
-Application \
-FreeRtos \
-FreeRtos/wrapper \
+SPL/inc \
+SPL/src \
 . \
-stm32f4/CMSIS \
-stm32f4/SPL/inc \
-stm32f4/SPL/src \
-stm32f4/core \
+core \
 

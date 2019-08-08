@@ -1,5 +1,5 @@
 # Folders
-Debug
+/Debug
 
 # Prerequisites
 *.d
@@ -33,3 +33,4 @@ Debug
 *.exe
 *.out
 *.app
+/Release/

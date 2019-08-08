@@ -1,63 +1,119 @@
-
-//#if defined (HSE_VALUE)
-// #undef HSE_VALUE
-// #define HSE_VALUE ((uint32_t)8000000)
-//#endif
-
 #include "stm32f4xx.h"
-#include "core_cm4.h"
-#include "FreeRTOS.h"
-#include "iActiveObject.h"
-#include "ReadEncoders.h"
-#include "LEDStrip.h"
-#include "BatteryChargeAsker.h"
-#include "USBUserInterface.h"
-#include "CollisionAvoidance.h"
-#include "MovementControl.h"
-#include "InitialisationList.h"
-#include "UARTtoRS485.h"
-#include "HyroMotor.h"
-#include "CollisionHandler.h"
-#include "ImuSensor.h"
+#include "system_stm32f4xx.h"
+//#include "misc.h"
+//#include "stm32f4xx_tim.h"
+#include "stm32f4xx_gpio.h"
+#include "stm32f4xx_rcc.h"
+#include "stm32f4xx_flash.h"
 
-cRTOS oRTOS;
+/*
+ *   System Clock Configuration
+ *   The system Clock is configured as follow :
+ *   System Clock source            = PLL (HSE)
+ *   SYSCLK(Hz)                     = 168000000
+ *   HCLK(Hz)                       = 168000000
+ *   AHB Prescaler                  = 1
+ *   APB1 Prescaler                 = 4
+ *   APB2 Prescaler                 = 2
+ *   HSE Frequency(Hz)              = 8000000
+ *   PLL_M                          = 8
+ *   PLL_N                          = 336
+ *   PLL_P                          = 2
+ *   PLL_Q                          = 7
+ *   VDD(V)                         = 3.3
+ *   Main regulator output voltage  = Scale1 mode
+ *   Flash Latency(WS)              = 5
+ */
 
-int main(void)
+/*
+ * Do not delete this function It provides
+ * The correct System Clock settings
+ */
+void system_clock_config()
 {
-	SystemInit();
-	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
+        /* Enable HSE oscillator */
+        RCC_HSEConfig(RCC_HSE_ON);
+        while (!RCC_GetFlagStatus(RCC_FLAG_HSERDY));
 
-	setLEDTask = new LEDStrip();
-	getBatChargeTask = new BatteryChargeAsker();
-	sensorTask = new CollisionAvoidance();
-	usbUserInterface = new USBUserInterface();
-//	moveTask = new MovementControl();
-//	readEncoders = new ReadEncoders();
-	hyroMotor = new HyroMotor();
-	collisionHandler = new CollisionHandler();
-	imuSensor = new ImuSensor();
+        /* Set FLASH latency */
+        FLASH_SetLatency(FLASH_Latency_5);
 
-	InitUser.GPIOPinInit();
-	InitUser.PWMInit();
-//	InitUser.EncoderInit();
-//	InitUser.OnePulseModeInit();
-	InitUser.ADCInit();
-	InitUser.InterruptInit();
-	InitUser.TIMInit();
-	setLEDTask->setColor(BLUE);
+        /* Set AHB (system bus) clock frequency */
+        RCC_HCLKConfig(RCC_SYSCLK_Div1);
 
-	getBatChargeTask->taskCreate(256, 2, "getBatCharge");
-	sensorTask->taskCreate(512, 3, "sensorTask");
-	hyroMotor->taskCreate(1024, 4, "hyroMotorTask");
-	usbUserInterface->taskCreate(512, 4, "UserUARTtoUSB");
-	collisionHandler->taskCreate(512, 4, "CollisionHandler");
-	imuSensor->taskCreate(512, 3, "imuSensorTask");
+        /* Set APB1 and APB2 clock frequency */
+        RCC_PCLK1Config(RCC_HCLK_Div4);
+        RCC_PCLK2Config(RCC_HCLK_Div2);
 
-//	moveTask->taskCreate(512,3,"moveTask");
-//	readEncoders->taskCreate(512,3,"readEncoders");
-//	setMotTask->taskCreate(600, 3, "setMotTask");
+         /* Set HSE as source for PLL
+         * Set divider (M, N, P, Q)
+         * Enable PLL
+         */
+        RCC_PLLConfig(RCC_PLLSource_HSE, 8, 336, 2, 7);
+        RCC_PLLCmd(ENABLE);
+        while (!RCC_GetFlagStatus(RCC_FLAG_PLLRDY));
 
-	oRTOS.startScheduler();
+        /* SysClk activation on the main PLL */
+        RCC_SYSCLKConfig(RCC_SYSCLKSource_PLLCLK);
+        while (!RCC_GetFlagStatus(RCC_FLAG_PLLRDY));
 
-	return 0;
+        /* Update CMSIS variable */
+        SystemCoreClock = 168000000;
 }
+
+#include <stdio.h>
+#include "FreeRTOS.h"
+#include "FreeRTOSConfig.h"
+#include "task.h"
+
+ /* Demo features */
+void set_led_pin();
+void run(void *pvParameters);
+
+int main(void) {
+
+        /* Set described options*/
+        system_clock_config();
+
+        /* Set GPIO for LED*/
+        set_led_pin();
+
+        /* Task create with a "run" function inside */
+        xTaskCreate(run, "run", 64, NULL, 1, NULL);
+
+        /* Start freertos */
+        vTaskStartScheduler();
+
+        return 1;
+}
+
+void run(void *pvParameters)
+{
+        /* Infinite circle with a LED flashing */
+        while (1) {
+                GPIO_SetBits(GPIOD, GPIO_Pin_13);
+                vTaskDelay(1000);
+                GPIO_ResetBits(GPIOD, GPIO_Pin_13);
+                vTaskDelay(1000);
+     }
+}
+
+void set_led_pin()
+{
+        /* Set port clocking */
+        RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
+
+        /* Defalt settings */
+        GPIO_InitTypeDef pin13;
+        GPIO_StructInit(&pin13);
+
+        /* User settings */
+        pin13.GPIO_Mode = GPIO_Mode_OUT;
+        pin13.GPIO_Pin = GPIO_Pin_13;
+        pin13.GPIO_OType = GPIO_OType_PP;
+        pin13.GPIO_PuPd = GPIO_PuPd_NOPULL;
+
+        /* User settings applying */
+        GPIO_Init(GPIOD, &pin13);
+}
+
