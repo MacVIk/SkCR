@@ -1,8 +1,4 @@
 #include "stm32f4xx.h"
-#include "system_stm32f4xx.h"
-//#include "misc.h"
-//#include "stm32f4xx_tim.h"
-#include "stm32f4xx_gpio.h"
 #include "stm32f4xx_rcc.h"
 #include "stm32f4xx_flash.h"
 
@@ -61,59 +57,34 @@ void system_clock_config()
         SystemCoreClock = 168000000;
 }
 
+/* FreeRtos core includes */
 #include <stdio.h>
 #include "FreeRTOS.h"
 #include "FreeRTOSConfig.h"
 #include "task.h"
 
- /* Demo features */
-void set_led_pin();
-void run(void *pvParameters);
+/* User libraries includes */
+#include "terminal.h"
+#include "RangefinderManager.h"
+#include "BatteryManager.h"
 
 int main(void) {
 
-        /* Set described options*/
+        /* Set clocking frequency */
         system_clock_config();
 
-        /* Set GPIO for LED*/
-        set_led_pin();
+        /* Terminal task creation */
+        xTaskCreate(terminal.run, "run", 256, NULL, 1, NULL);
 
-        /* Task create with a "run" function inside */
-        xTaskCreate(run, "run", 64, NULL, 1, NULL);
+        /* BatteryManager task creation */
+        xTaskCreate(rf_manager.run, "run", 256, NULL, 1, NULL);
 
-        /* Start freertos */
+        /* RangefinderManager task creation */
+        xTaskCreate(bat_manager.run, "run", 512, NULL, 1, NULL);
+
+        /* Start tasks */
         vTaskStartScheduler();
 
         return 1;
-}
-
-void run(void *pvParameters)
-{
-        /* Infinite circle with a LED flashing */
-        while (1) {
-                GPIO_SetBits(GPIOD, GPIO_Pin_13);
-                vTaskDelay(1000);
-                GPIO_ResetBits(GPIOD, GPIO_Pin_13);
-                vTaskDelay(1000);
-     }
-}
-
-void set_led_pin()
-{
-        /* Set port clocking */
-        RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
-
-        /* Defalt settings */
-        GPIO_InitTypeDef pin13;
-        GPIO_StructInit(&pin13);
-
-        /* User settings */
-        pin13.GPIO_Mode = GPIO_Mode_OUT;
-        pin13.GPIO_Pin = GPIO_Pin_13;
-        pin13.GPIO_OType = GPIO_OType_PP;
-        pin13.GPIO_PuPd = GPIO_PuPd_NOPULL;
-
-        /* User settings applying */
-        GPIO_Init(GPIOD, &pin13);
 }
 

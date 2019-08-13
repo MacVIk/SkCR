@@ -1,5 +1,6 @@
 # Folders
 /Debug
+/.settings
 
 # Prerequisites
 *.d
