@@ -9,6 +9,7 @@
 #define CODE_BATTERYMANAGER_H_
 
 #include "stm32f4xx.h"
+#include "TaskWrapper.h"
 
 #define MAX_BATTERY_VOLTAGE 	((uint16_t) 255)	// max battery charge in ADC units (get empirically)
 #define STOP_BATTERY_VOLTAGE 	((uint16_t) 155)	// 5% of battery
@@ -16,14 +17,14 @@
 
 #define ADC_RANK                ((uint8_t) 1)
 
-class BatteryManager {
+class BatteryManager: public TaskWrapper {
 public:
         BatteryManager();
 	virtual ~BatteryManager();
 
 	void init_adc();
 	uint8_t get_charge();
-	static void run(void *parameters);
+	void run();
 private:
 	static uint8_t ChargeVal_P;
 };

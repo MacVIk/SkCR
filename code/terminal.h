@@ -8,13 +8,15 @@
 #ifndef CODE_TERMINAL_H
 #define CODE_TERMINAL_H
 
-class Terminal {
+#include "TaskWrapper.h"
+
+class Terminal: public TaskWrapper {
 public:
         Terminal();
 	virtual ~Terminal();
 
 	void init();
-	static void run(void *parameters);
+	void run();
 };
 
 extern Terminal terminal;

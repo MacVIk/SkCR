@@ -74,13 +74,16 @@ int main(void) {
         system_clock_config();
 
         /* Terminal task creation */
-        xTaskCreate(terminal.run, "run", 256, NULL, 1, NULL);
+        terminal.task_create(256, 1, "Terminal");
+//        xTaskCreate(terminal.run, "run", 256, NULL, 1, NULL);
 
         /* BatteryManager task creation */
-        xTaskCreate(rf_manager.run, "run", 256, NULL, 1, NULL);
+        bat_manager.task_create(256, 1, "Battery");
+//        xTaskCreate(rf_manager.run, "run", 256, NULL, 1, NULL);
 
         /* RangefinderManager task creation */
-        xTaskCreate(bat_manager.run, "run", 512, NULL, 1, NULL);
+        rf_manager.task_create(512, 1, "Rangefinder");
+//        xTaskCreate(bat_manager.run, "run", 512, NULL, 1, NULL);
 
         /* Start tasks */
         vTaskStartScheduler();

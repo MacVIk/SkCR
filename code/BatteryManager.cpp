@@ -64,7 +64,7 @@ uint8_t BatteryManager::get_charge()
         return ChargeVal_P;
 }
 
-void BatteryManager::run(void *parameters)
+void BatteryManager::run()
 {
         uint16_t ChargeVal = 0;
         uint16_t hBorder = MAX_BATTERY_VOLTAGE;

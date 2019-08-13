@@ -29,7 +29,7 @@ Terminal::Terminal() {
 Terminal::~Terminal() {
 }
 
-void Terminal::run(void *parameters)
+void Terminal::run()
 {
 	uint8_t answerLength = 0;
 	uint8_t i = 0;

@@ -157,7 +157,7 @@ uint8_t RangefinderManager::quick_select(uint8_t* input, uint8_t p, uint8_t r, u
                 return quick_select(input, j + 1, r, k - length);
 }
 
-void RangefinderManager::calculateDistanceQsort(uint8_t* distArr, uint8_t i)
+void RangefinderManager::calculate_distance(uint8_t* distArr, uint8_t i)
 {
         uint16_t timeBuff = 0;
         uint8_t median = 0;
@@ -181,7 +181,7 @@ void RangefinderManager::get_distance(uint8_t* distArr)
                 distArr[i] = outDistArr[i];
 }
 
-void RangefinderManager::run(void *parameters)
+void RangefinderManager::run()
 {
         TickType_t xLastWakeTime;
         init_pwm();
@@ -192,7 +192,7 @@ void RangefinderManager::run(void *parameters)
                 xLastWakeTime = xTaskGetTickCount();
 
                 for (uint8_t i = 0; i < RANGEFINDERS_NUMBER; i++)
-                        calculateDistanceQsort(sensDistArr[i], i);
+                        calculate_distance(sensDistArr[i], i);
 
                 //		xSemaphoreTake(xRengefindersMutex, portMAX_DELAY);
                 for (uint8_t i = 0; i < RANGEFINDERS_NUMBER; i++)
