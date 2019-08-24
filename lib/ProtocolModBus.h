@@ -1,4 +1,4 @@
-/*
+        /*
  * UARTtoRS485.h
  *
  *  Created on: 20.03.2019
@@ -9,72 +9,82 @@
 #define UARTTORS485_H_
 
 #include "stm32f4xx.h"
-#include "UARTuserInit.h"
 
-//*************Modbus_Functions*************
+#include "DriverUsart.h"
 
-#define READ_MODBUS_REG 	((uint8_t)  0x03)
-#define WRITE_MODBUS_REG 	((uint8_t)  0x06)
+/* ModBus functions */
+#define READ_HOLDING_REG 	((uint8_t)  0x03)
+#define WRITE_SINGLE_REG	((uint8_t)  0x06)
 #define WRITE_MULTIPLE_REG 	((uint8_t)  0x10)
 
-//*************COMANDS_MACROSES*************
-#define MODE_ANGLE 		((uint8_t)  1)
-#define MODE_SPEED		((uint8_t)  2)
-#define MODE_PWM		((uint8_t)  3)
-#define MODE_NONE		((uint8_t)  0)
+/* Package the messege */
+typedef struct {
+        uint8_t id;
+        uint8_t code;
+        int16_t reg_address;
+        int16_t reg_value;
+        int16_t* pData;
+} type_pack;
 
-//**************int16_t_Registers*************
-#define REG_MODE		((uint8_t)  0)
-#define REG_SET_PWM		((uint8_t)  2)
-#define REG_SET_SPEED		((uint8_t)  3)
-#define REG_SET_ANGLE_LOW	((uint8_t)  4)
-#define REG_SET_ANGLE_HIGH	((uint8_t)  5)
-#define REG_V_CUTOFF		((uint8_t)  9)
-#define REG_I_CUTOFF		((uint8_t)  10)
-#define REG_T_CUTOFF		((uint8_t)  11)
-#define REG_S_PID_I		((uint8_t)  12)
-#define REG_S_PID_P		((uint8_t)  13)
-#define REG_S_PID_D		((uint8_t)  14)
-#define REG_A_PID_I		((uint8_t)  15)
-#define REG_A_PID_P		((uint8_t)  16)
-#define REG_A_PID_D		((uint8_t)  17)
-#define REG_TIME_OUT		((uint8_t)  18)
-#define REG_S_PID_I_LIMIT	((uint8_t)  19)
-#define REG_A_PID_I_LIMIT	((uint8_t)  20)
-#define REG_PWM_LIMIT		((uint8_t)  21)
-#define REG_ERROR_CODE		((uint8_t)  29)
+//typedef struct {
+//        uint8_t id;
+//        uint8_t code;
+//        int16_t* pArr;
+//        uint8_t arr_size;
+//} type_unpack;
 
-//**************RO_Registers*************
+//typedef enum {
+//        INCORRECT_ID
+//
+//} type_receiv_status;
 
-#define REG_READ_CURRENT	((uint8_t)  65)
-#define REG_READ_TEMP		((uint8_t)  66)
-#define REG_READ_ANGLE_LOW	((uint8_t)  67)
-#define REG_READ_ANGLE_HIGH	((uint8_t)  68)
-#define REG_READ_SPEED		((uint8_t)  69)
-
-//**************RW_Registers*************
-
-#define REG_ID			((int16_t)  129)
-#define REG_SAVE_FLASH		((int16_t)  130)
-
-class UARTtoRS485 {
+/* Inheritance from interface class */
+class ProtocolModBus: public DriverUsart {
 public:
-	UARTtoRS485();
-	virtual ~UARTtoRS485();
+        ProtocolModBus();
+	virtual ~ProtocolModBus();
 
-	void init(UARTuserInit* uartX);
-	void modbusReadReg(uint8_t id, uint8_t regAdress, uint8_t regQuantity);
-	void modbusWriteReg(uint8_t id, uint8_t regAdress, uint16_t data);
-	void modbusWriteMultReg(uint8_t id, uint8_t regAdress, uint16_t* daraArr);
-	uint16_t Crc16(uint8_t *pData, uint8_t length);
-	int16_t uint8toInt16(uint8_t* arr);
-	int32_t uint8toInt32(uint8_t* arr);
-	void modbusReadData(uint8_t* arr, uint8_t &length);
+protected:
+	/* Read data */
+//	void read_coil_status();
+//	void read_discrete_inputs();
+	void read_holding_registers(uint8_t id, int16_t reg_adr, int16_t reg_number);
+//	void read_input_registers();
+
+	/* Write single value */
+//	 void write_single_coil();
+	 void write_single_register(uint8_t id, int16_t reg_adr, int16_t value);
+
+	 /* Write multiple values */
+//	 void write_multiple_coils();
+	 void write_multiple_registers(uint8_t id, int16_t reg_adr,
+	                 int16_t* p_arr, int16_t size_arr);
+
+	 /* Change registers */
+//	 void mask_write_registers();
+
+	 /* File access */
+//	 void read_file_record();
+//	 void write_file_record();
+
+	 /* Diagnostic functions */
+//	 void read_exeption_status();
+//	 void diagnostic();
+//	 void get_com_event_counter();
+//	 void get_com_event_log();
+//	 void report_slave_id();
+
+	 /* Other */
+//	 void encapsulated_nterface_ransport();
+	uint8_t whait_acknowlege();
+	void modbus_receive_package(uint8_t &id, uint8_t &code,
+	                int16_t* data_arr, uint8_t &arr_size);
 
 private:
-	UARTuserInit* uart;
-	uint8_t regArr[20];
-//	bool rxFlag;
+	uint16_t crc_calculate(uint8_t *pData, uint8_t length);
+	void modbus_send_package(uint8_t size_arr);
+	type_pack package;
+
 };
 
 static const uint8_t aucCRCHi[] = {

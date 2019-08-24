@@ -1,29 +1,30 @@
 /*
- * UARTuserInit.cpp
+ * DriverUsart.cpp
  *
  *  Created on: 03.04.2019
  *      Author: Taras.Melnik
  */
 
-#include "UARTuserInit.h"
 #include "stm32f4xx_rcc.h"
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_dma.h"
 #include "stm32f4xx_usart.h"
 #include "misc.h"
 
-UARTuserInit::UARTuserInit() {
+#include "DriverUsart.h"
+
+DriverUsart::DriverUsart() {
         nvicPort = GPIOA;
         nvicPin = 0;
         txStream = DMA1_Stream1;
         pointer = 0;
 }
 
-UARTuserInit::~UARTuserInit() {
+DriverUsart::~DriverUsart() {
 	// TODO Auto-generated destructor stub
 }
 
-void UARTuserInit::gpioInit(GPIO_TypeDef* GPIOx, uint16_t rxPin, uint16_t txPin, uint8_t af)
+void DriverUsart::init_gpio(GPIO_TypeDef* GPIOx, uint16_t rxPin, uint16_t txPin, uint8_t af)
 {
 	uint8_t rxPinSrs;
 	uint8_t txPinSrs;
@@ -44,11 +45,11 @@ void UARTuserInit::gpioInit(GPIO_TypeDef* GPIOx, uint16_t rxPin, uint16_t txPin,
 	GPIO_InitTypeDef UartTxPin;
 	GPIO_InitTypeDef UartRxPin;
 	//Rx-Tx_Pins//
-	UartTxPin.GPIO_Pin 	= txPin;
+	UartTxPin.GPIO_Pin = txPin;
 	UartTxPin.GPIO_Mode = GPIO_Mode_AF;
 	UartTxPin.GPIO_OType = GPIO_OType_PP;
 	GPIO_Init(GPIOx,&UartTxPin);
-	UartRxPin.GPIO_Pin	 = rxPin;
+	UartRxPin.GPIO_Pin = rxPin;
 	UartRxPin.GPIO_Mode  = GPIO_Mode_AF;
 	UartRxPin.GPIO_OType = GPIO_OType_OD;
 	UartRxPin.GPIO_PuPd  = GPIO_PuPd_UP;
@@ -57,7 +58,7 @@ void UARTuserInit::gpioInit(GPIO_TypeDef* GPIOx, uint16_t rxPin, uint16_t txPin,
 	GPIO_PinAFConfig(GPIOx, txPinSrs, af);
 }
 
-void UARTuserInit::dmaInit(USART_TypeDef* USARTx)
+void DriverUsart::init_dma(USART_TypeDef* USARTx)
 {
 	DMA_Stream_TypeDef* rxStream;
 	DMA_Stream_TypeDef* txStream;
@@ -132,21 +133,21 @@ void UARTuserInit::dmaInit(USART_TypeDef* USARTx)
 	NVIC_SetPriority(txNvic, 10);
 }
 
-void UARTuserInit::uartInit(GPIO_TypeDef* GPIOx, USART_TypeDef* USARTx, bool rsStatus)
+void DriverUsart::init_usart(GPIO_TypeDef* GPIOx, USART_TypeDef* USARTx, bool rsStatus)
 {
 	USART_InitTypeDef USART;
 	NVIC_InitTypeDef USARTnvic;
 	IRQn_Type USARTx_IRQn;
 
 //	this->nvicUart = USARTx;
-	dmaInit(USARTx);
+	init_dma(USARTx);
 
 	if (GPIOx == GPIOB && USARTx == USART3) {
-		gpioInit(GPIOx, GPIO_Pin_11, GPIO_Pin_10, GPIO_AF_USART3);
+		init_gpio(GPIOx, GPIO_Pin_11, GPIO_Pin_10, GPIO_AF_USART3);
 	} else if (GPIOx == GPIOC && USARTx == USART6) {
-		gpioInit(GPIOx, GPIO_Pin_7, GPIO_Pin_6, GPIO_AF_USART6);
+		init_gpio(GPIOx, GPIO_Pin_7, GPIO_Pin_6, GPIO_AF_USART6);
 	} else if (GPIOx == GPIOA && USARTx == UART4)
-		gpioInit(GPIOx, GPIO_Pin_1, GPIO_Pin_0, GPIO_AF_UART4);
+		init_gpio(GPIOx, GPIO_Pin_1, GPIO_Pin_0, GPIO_AF_UART4);
 
 	if (USARTx == USART3) {
 		RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
@@ -186,11 +187,11 @@ void UARTuserInit::uartInit(GPIO_TypeDef* GPIOx, USART_TypeDef* USARTx, bool rsS
 	USART_DMACmd(USARTx, USART_DMAReq_Tx, ENABLE);
 }
 
-void UARTuserInit::gpioSwitchInit(GPIO_TypeDef* GPIOx, uint16_t swPin)
+void DriverUsart::gpioSwitchInit(GPIO_TypeDef* GPIOx, uint16_t swPin)
 {
 	GPIO_InitTypeDef RxTxPin;
-	this->nvicPin = swPin;
-	this->nvicPort = GPIOx;
+	nvicPin = swPin;
+	nvicPort = GPIOx;
 	if (GPIOx == GPIOB)
 		RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
 	RxTxPin.GPIO_Pin = swPin;
@@ -198,7 +199,7 @@ void UARTuserInit::gpioSwitchInit(GPIO_TypeDef* GPIOx, uint16_t swPin)
 	RxTxPin.GPIO_OType = GPIO_OType_PP;
 	GPIO_Init(GPIOx, &RxTxPin);
 }
-//void UARTuserInit::UARTx_IRQnFunc()
+//void DriverUsart::UARTx_IRQnFunc()
 //{
 //	if (USART_GetITStatus(nvicUart, USART_IT_IDLE)){			// Clear IDLE flag step 1
 //		DMA_Cmd(nvicStream, DISABLE);							// DMA turn off to clear DMA1 counter
@@ -210,28 +211,34 @@ void UARTuserInit::gpioSwitchInit(GPIO_TypeDef* GPIOx, uint16_t swPin)
 //	}
 //}
 
-void UARTuserInit::send(uint8_t* sendArr, uint8_t length)
+void DriverUsart::usart_send(uint8_t* sendArr, uint8_t length)
 {
 	if (DMA_GetCmdStatus(txStream))
 		DMA_Cmd(txStream, DISABLE);
 	GPIO_SetBits(nvicPort, nvicPin);
-	if (txStream->M0AR !=(uint32_t) sendArr)
+	if (txStream->M0AR != (uint32_t) sendArr)
 		txStream->M0AR = (uint32_t) sendArr;
 	DMA_SetCurrDataCounter(txStream, length);
 	DMA_Cmd(txStream, ENABLE);
 }
 
-uint8_t UARTuserInit::receiveByte(uint8_t &byte)
+uint8_t DriverUsart::usart_receive_byte()
 {
-	byte = this->usartRxArr[pointer];
-	this->pointer++;
-	return pointer;
+	return usartRxArr[pointer++];
 }
 
-void UARTuserInit::resetPointer()
+uint8_t DriverUsart::usart_get_rx_arr_size()
 {
+        return pointer;
+}
+
+void DriverUsart::usart_stop_receiving()
+{
+        for (uint8_t i = 0; i < pointer; i ++)
+                usartRxArr[pointer] = 0;
 	pointer = 0;
 }
+
 
 
 

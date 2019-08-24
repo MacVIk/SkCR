@@ -12,10 +12,7 @@
 
 class Terminal: public TaskWrapper {
 public:
-        Terminal();
-	virtual ~Terminal();
 
-	void init();
 	void run();
 };
 

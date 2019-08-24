@@ -67,6 +67,8 @@ void system_clock_config()
 #include "terminal.h"
 #include "RangefinderManager.h"
 #include "BatteryManager.h"
+#include "MotorManager.h"
+#include "LedRgb.h"
 
 int main(void) {
 
@@ -74,7 +76,7 @@ int main(void) {
         system_clock_config();
 
         /* Terminal task creation */
-        terminal.task_create(256, 1, "Terminal");
+        terminal.task_create(256, 2, "Terminal");
 //        xTaskCreate(terminal.run, "run", 256, NULL, 1, NULL);
 
         /* BatteryManager task creation */
@@ -84,6 +86,12 @@ int main(void) {
         /* RangefinderManager task creation */
         rf_manager.task_create(512, 1, "Rangefinder");
 //        xTaskCreate(bat_manager.run, "run", 512, NULL, 1, NULL);
+
+        /* Motors control task creation */
+        mot_manager.task_create(1024, 1, "Motors");
+
+        /* Robot LED initialisatin */
+        ledRgb.init_led();
 
         /* Start tasks */
         vTaskStartScheduler();

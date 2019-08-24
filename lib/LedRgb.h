@@ -5,8 +5,8 @@
  *      Author: Taras.Melnik
  */
 
-#ifndef LIB_LED_RGB_H_
-#define LIB_LED_RGB_H_
+#ifndef LIB_LEDRGB_H_
+#define LIB_LEDRGB_H_
 
 /* Type for led color */
 typedef enum {
@@ -18,23 +18,26 @@ typedef enum {
         BLACK           = 6
 } cl;
 
-class Led_rgb {
+class LedRgb {
 public:
-        Led_rgb();
-        virtual ~Led_rgb();
+        LedRgb();
+        virtual ~LedRgb();
 
         /* Turn on the led */
         void init_led();
 
         /* Control function */
+        void mutex_take(const cl color);
         void mutex_take();
         void mutex_give();
 
         /* User function */
-        void set_color(cl color);
+        void set_color(const cl color);
 private:
         void init_gpio();
         bool buttonMutex;
 };
 
-#endif /* LIB_LED_RGB_H_ */
+extern LedRgb ledRgb;
+
+#endif /* LIB_LEDRGB_H_ */

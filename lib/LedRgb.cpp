@@ -5,28 +5,30 @@
  *      Author: Taras.Melnik
  */
 
-#include "lib/led_rgb.h"
+#include <LedRgb.h>
 #include "stm32f4xx.h"
 #include "stm32f4xx_rcc.h"
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_tim.h"
 
-Led_rgb::Led_rgb() {
+LedRgb ledRgb;
+
+LedRgb::LedRgb() {
         buttonMutex = false;
 }
 
-Led_rgb::~Led_rgb() {
+LedRgb::~LedRgb() {
         // TODO Auto-generated destructor stub
 }
 
-void Led_rgb::init_led()
+void LedRgb::init_led()
 {
         init_gpio();
         set_color(BLUE);
 
 }
 
-void Led_rgb::init_gpio()
+void LedRgb::init_gpio()
 {
         RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
         RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5, ENABLE);
@@ -60,17 +62,23 @@ void Led_rgb::init_gpio()
         TIM_OC3Init(TIM5, &tim5_ch3_pwm);
 }
 
-void Led_rgb::mutex_take()
+void LedRgb::mutex_take(const cl color)
+{
+        set_color(color);
+        this->buttonMutex = true;
+}
+
+void LedRgb::mutex_take()
 {
         this->buttonMutex = true;
 }
 
-void Led_rgb::mutex_give()
+void LedRgb::mutex_give()
 {
         this->buttonMutex = false;
 }
 
-void Led_rgb::set_color(cl color)
+void LedRgb::set_color(const cl color)
 {
         /* Check button status */
         if (!buttonMutex) {
