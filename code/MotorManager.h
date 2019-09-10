@@ -51,7 +51,8 @@ public:
 	/* Terminal interface */
 	void set_robot_speed(uint8_t* byteArr);
 	void get_robot_position(uint8_t* byteArr);
-
+	bool get_robot_button_status();
+	bool get_robot_current_status();
 	/* Mandatory task method */
 	void run();
 
@@ -81,7 +82,6 @@ private:
         uint8_t position_byte_arr[12];
         uint8_t speed_byte_arr[8];
         bool terminalRxFlag;
-        bool firstTransmitedFlag;
 
 	/* Internal interface */
         MotorErrorStatus read_motors_aknowlege();

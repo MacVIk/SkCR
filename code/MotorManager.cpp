@@ -42,12 +42,26 @@ void MotorManager::get_robot_position(uint8_t* byte_arr)
                 byte_arr[i] = position_byte_arr[i];
 }
 
+bool MotorManager::get_robot_button_status()
+{
+        bool buff {robot.button_status};
+        robot.button_status = false;
+        return buff;
+}
+
+bool MotorManager::get_robot_current_status()
+{
+        bool buff {robot.current_status};
+        robot.current_status = false;
+        return buff;
+}
+
 /* ------------------------------------------------------------
  * Motors data processing functions
  */
 void MotorManager::set_robot_speed()
 {
-        float robot_speed[2];
+        float robot_speed[2] = {};
 
         /* Convert from byte array into linear and angular robot velocity */
         memcpy(robot_speed, speed_byte_arr, sizeof(robot_speed));
@@ -59,8 +73,8 @@ void MotorManager::set_robot_speed()
 
 void MotorManager::set_robot_speed(float lin_vel, float ang_vel )
 {
-        float robot_speed[2];
-        int16_t wheel_speed[2];
+        float robot_speed[2] {lin_vel, ang_vel};
+        int16_t wheel_speed[2] {};
 
         /* Safety limitation on the robot speed */
         if (lin_vel > MAX_ROBOT_SPEED)
@@ -68,7 +82,6 @@ void MotorManager::set_robot_speed(float lin_vel, float ang_vel )
         convert_robot_to_wheel_speed(robot_speed, wheel_speed);
 
         /* Clear synchronization flag to switch pin on rs485 driver */
-        firstTransmitedFlag = false;
         motor_wheel_1.set_wheel_speed(wheel_speed[0]);
         motor_wheel_2.set_wheel_speed(wheel_speed[1]);
         robot.code = Request::SET_SPEED;
@@ -94,8 +107,8 @@ void MotorManager::process_speed()
 //        convert_wheel_to_robot_speed();
         r_vel_arr[0] = motor_wheel_1.options.speed;
         r_vel_arr[1] = motor_wheel_2.options.speed;
-
-        memcpy(speed_byte_arr, r_vel_arr,sizeof(speed_byte_arr));
+//incorrect
+//        memcpy(speed_byte_arr, r_vel_arr,sizeof(speed_byte_arr));
 }
 
 void MotorManager::process_current()
@@ -213,12 +226,15 @@ void MotorManager::send_next_request(uint8_t &current_code)
 {
         static uint8_t cbuff = GET_ANGLE;
         /* Clear synchronization flag */
-        firstTransmitedFlag = false;
         /* Send request for the next command */
         if (current_code == Request::SET_SPEED) {
                 current_code = cbuff;
-                return;
-        } else if (current_code == Request::GET_ANGLE) {
+                if (terminalRxFlag) {
+                        terminalRxFlag = false;
+                        return;
+                }
+        }
+        if (current_code == Request::GET_ANGLE) {
                 motor_wheel_1.request_current();
                 motor_wheel_2.request_current();
         } else if (current_code == Request::GET_CURRENT_STATUS) {
@@ -256,7 +272,6 @@ void MotorManager::run()
 	motor_wheel_1.init_wheel();
 	motor_wheel_2.init_wheel();
 	set_robot_speed(STOP_MOTION, STOP_MOTION);
-
 
 	while (1) {
 	        /* Function for accurate task sleep time */
@@ -313,7 +328,8 @@ void MotorManager::run()
 	                motor_wheel_2.init_wheel();
 	                set_robot_speed(STOP_MOTION, STOP_MOTION);
 	        }
-	        vTaskDelayUntil(&pxPreviousWakeTime, 4);
+	        vTaskDelay(3);
+//	        vTaskDelayUntil(&pxPreviousWakeTime, 4);
 	}
 }
 

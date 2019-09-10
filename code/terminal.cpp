@@ -24,6 +24,26 @@
 Terminal terminal;
 static DriverUsart uart_6;
 
+void Terminal::add_error_byte(uint8_t& answerLength)
+{
+        uint8_t err_byte = 0;
+        if (mot_manager.get_robot_button_status())
+                err_byte |= 1;
+        if (mot_manager.get_robot_current_status())
+                err_byte |= 1 << 1;
+//        if (collisionHandler->getStatus())
+//                err_byte |= 1 << 2;
+        uart_6.usartTxArr[answerLength++] = err_byte;
+//        uart_6.usartTxArr[++answerLength] = 0;
+}
+
+void Terminal::calculate_checksum(uint8_t answerLength)
+{
+        uart_6.usartTxArr[answerLength] = 0;
+        for (uint8_t i = 0; i < answerLength; ++i)
+                uart_6.usartTxArr[answerLength] += uart_6.usartTxArr[i];
+}
+
 void Terminal::run()
 {
 	uint8_t answerLength = 0;
@@ -39,30 +59,30 @@ void Terminal::run()
 			uart_6.usartTxArr[0] = 0x11;
 			answerLength = 1;
 
-		} else if (uart_6.usartRxArr[0] ==  HighLvlCommand::SET_COLOR) {
+		} else if (uart_6.usartRxArr[0] == HighLvlCommand::SET_COLOR) {
 		        ledRgb.set_color((cl) uart_6.usartRxArr[1]);
 			uart_6.usartTxArr[0] = 0;
 			answerLength = 1;
 
-		} else if (uart_6.usartRxArr[0] ==  HighLvlCommand::GET_BATTERY_CHARGE) {
+		} else if (uart_6.usartRxArr[0] == HighLvlCommand::GET_BATTERY_CHARGE) {
 			uart_6.usartTxArr[0] = bat_manager.get_charge();
 			answerLength = 1;
 
-		} else if (uart_6.usartRxArr[0] ==  HighLvlCommand::GET_DISTANCE) {
+		} else if (uart_6.usartRxArr[0] == HighLvlCommand::GET_DISTANCE) {
 			rf_manager.get_distance(uart_6.usartTxArr);
 			answerLength = RANGEFINDERS_NUMBER;
 
-		} else if (uart_6.usartRxArr[0] ==  HighLvlCommand::SET_ROBOT_SPEED) {
-		        mot_manager.set_robot_speed(&(uart_6.usartRxArr[1]));
+		} else if (uart_6.usartRxArr[0] == HighLvlCommand::SET_ROBOT_SPEED) {
+		        mot_manager.set_robot_speed(&uart_6.usartRxArr[1]);
 			answerLength = 1;
 
 			/* Receive from RS485 ----- (x, y, theta) */
-		} else if (uart_6.usartRxArr[0] ==  HighLvlCommand::GET_WHEELS_ANGLE) {
+		} else if (uart_6.usartRxArr[0] == HighLvlCommand::GET_WHEELS_ANGLE) {
 		        mot_manager.get_robot_position(uart_6.usartTxArr);
 			answerLength = 12;
 
 			/* Receive from IMU ----- (x, y, theta) */
-		} else if (uart_6.usartRxArr[0] ==  HighLvlCommand::RECEIVE_IMU) {
+		} else if (uart_6.usartRxArr[0] == HighLvlCommand::RECEIVE_IMU) {
 //			imuSensor->getOdometry(uart_6.usartTxArr);
 			answerLength = 12;
 
@@ -71,18 +91,10 @@ void Terminal::run()
 			uart_6.usartTxArr[1] = uart_6.usartTxArr[0];
 			answerLength = 1;
 		}
-//		errByte = 0;
-//		if (hyroMotor->getWhPowStatus())
-//			errByte |= 1;
-//		if (hyroMotor->getWhCurColStatus())
-//			errByte |= 1 << 1;
-//		if (collisionHandler->getStatus())
-//			errByte |= 1 << 2;
-//		uart_6.usartTxArr[answerLength] = errByte;
-//		uart_6.usartTxArr[++answerLength] = 0;
-		uart_6.usartTxArr[answerLength] = 0;
-		for (uint8_t i = 0; i < answerLength; i++)
-			uart_6.usartTxArr[answerLength] += uart_6.usartTxArr[i];
+
+		add_error_byte(answerLength);
+		calculate_checksum(answerLength);
+
 		uart_6.usart_send(uart_6.usartTxArr, ++answerLength);
 
 		/* Finish the task before next tick */
