@@ -88,7 +88,7 @@ int main(void) {
 //        xTaskCreate(bat_manager.run, "run", 512, NULL, 1, NULL);
 
         /* Motors control task creation */
-        mot_manager.task_create(1024, 1, "Motors");
+        mot_manager.task_create(2048, 1, "Motors");
 
         /* Robot LED initialisatin */
         ledRgb.init_led();

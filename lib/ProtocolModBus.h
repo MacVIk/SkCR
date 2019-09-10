@@ -77,8 +77,7 @@ protected:
 	 /* Other */
 //	 void encapsulated_nterface_ransport();
 	uint8_t whait_acknowlege();
-	void modbus_receive_package(uint8_t &id, uint8_t &code,
-	                int16_t* data_arr, uint8_t &arr_size);
+	bool modbus_receive_package(uint8_t &id, int16_t* data_arr, uint8_t &arr_size);
 
 private:
 	uint16_t crc_calculate(uint8_t *pData, uint8_t length);

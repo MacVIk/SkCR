@@ -27,33 +27,30 @@
 #define CONST_WHEEL_2 		((float32_t) 3.57f)	// (pointsOfwheel/rad)
 #define ROTATION_CONST		((float32_t) 0.1666f)  	// WheelRadius/CenterRadius
 
-enum MotorErrorStatus {
+enum MotorErrorStatus : char {
         OK,
+        MOTORS_DIF_COMMAND,
         MOTOR_1_DONOT_ANSWER,
         MOTOR_2_DONOT_ANSWER,
-        MOTORS_DONOT_ANSWER,
+        MOTORS_DONOT_ANSWER
 };
 
 /* Requests for motors */
-typedef enum Request {
+enum Request : char {
         SET_SPEED,
-        GET_POSITION,
+        GET_ANGLE,
         GET_CURRENT_STATUS,
         GET_ERROR_STATUS,
 
         /* This macros should be the last */
         END_POSITION
-} type_motor_request;
+};
 
 class MotorManager: public TaskWrapper {
 public:
 	/* Terminal interface */
 	void set_robot_speed(uint8_t* byteArr);
 	void get_robot_position(uint8_t* byteArr);
-
-	/* Interrupt method */
-        void switch_to_receive();
-
 
 	/* Mandatory task method */
 	void run();
@@ -66,10 +63,10 @@ private:
                 float x;
                 float y;
                 float theta;
+                uint8_t code;
                 bool button_status;
                 bool current_status;
         } robot;
-
 
         /* Working methods */
         void set_robot_speed();
@@ -77,6 +74,7 @@ private:
         void process_angle();
         void process_current();
         void process_error();
+        void process_speed();
 
         /* Terminal communication parameters */
         //ToDO check mutex in FreeRtos
@@ -86,17 +84,14 @@ private:
         bool firstTransmitedFlag;
 
 	/* Internal interface */
-        MotorErrorStatus read_motors_aknowlege(uint8_t &code);
-	void send_next_request(uint8_t current_code);
+        MotorErrorStatus read_motors_aknowlege();
+	void send_next_request(uint8_t &current_code);
 
         /* Internal math transforms */
 	void fetch_angle();
         void convert_robot_to_wheel_speed(float* hDatArr, int16_t* whArr);
+        void convert_wheel_to_robot_speed();
         void calculate_position();
-
-
-
-
 };
 
 extern MotorManager mot_manager;

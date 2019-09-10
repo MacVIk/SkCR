@@ -58,23 +58,25 @@ public:
         virtual ~MotorWheel();
 
         struct WheelOptions {
+                int32_t angle;
+                int16_t speed;
+                int16_t current_value;
                 uint8_t id;
                 uint8_t last_code;
-                int16_t speed;
-                int32_t angle;
-                int16_t current_value;
+                bool error_flag;
         } options;
 
         bool init_wheel();
         bool wait_acknowlege();
 
-        void set_wheel_speed(int16_t s_val);
+        void set_wheel_speed(const int16_t s_val);
         void request_angle();
         void request_wheel_speed();
         void request_current();
         void request_error();
+        void clear_error();
 
-        void read_response();
+        bool read_response();
 private:
         uint8_t id;
 };

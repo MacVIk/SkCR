@@ -26,30 +26,115 @@ MotorManager mot_manager;
 static MotorWheel motor_wheel_1(1);
 static MotorWheel motor_wheel_2(2);
 
-MotorErrorStatus MotorManager::read_motors_aknowlege(uint8_t &code)
+/* ----------------------------------------------------------
+ * High level commands
+ */
+void MotorManager::set_robot_speed(uint8_t* byte_arr)
 {
-        motor_wheel_1.read_response();
-        motor_wheel_2.read_response();
-        //ToDo Add error if there is no acknowledge
-        if (motor_wheel_1.options.last_code != 0 && motor_wheel_2.options.last_code != 0)
-        {
-                /* ToDo if codes do not matched up */
-//                if (motor_wheel_1.options.last_code == motor_wheel_2.options.last_code)
-//                        code = motor_wheel_1.options.last_code;
-                return MotorErrorStatus::OK;
-        } else
-                return MotorErrorStatus::MOTORS_DONOT_ANSWER;
-
+        for (uint8_t i = 0; i < 8; i++)
+                speed_byte_arr[i]= byte_arr[i];
+        terminalRxFlag = true;
 }
 
-void MotorManager::switch_to_receive()
+void MotorManager::get_robot_position(uint8_t* byte_arr)
 {
-        // ToDo switch pin from transmitting to receiving
-	if (firstTransmitedFlag) {
-		GPIO_ResetBits(GPIOB, GPIO_Pin_12);
-		firstTransmitedFlag = false;
-	} else
-	        firstTransmitedFlag = true;
+        for (uint8_t i = 0; i < 12; i++)
+                byte_arr[i] = position_byte_arr[i];
+}
+
+/* ------------------------------------------------------------
+ * Motors data processing functions
+ */
+void MotorManager::set_robot_speed()
+{
+        float robot_speed[2];
+
+        /* Convert from byte array into linear and angular robot velocity */
+        memcpy(robot_speed, speed_byte_arr, sizeof(robot_speed));
+
+        /* If status was not processed */
+        if (!robot.current_status)
+                set_robot_speed(robot_speed[0], robot_speed[1]);
+}
+
+void MotorManager::set_robot_speed(float lin_vel, float ang_vel )
+{
+        float robot_speed[2];
+        int16_t wheel_speed[2];
+
+        /* Safety limitation on the robot speed */
+        if (lin_vel > MAX_ROBOT_SPEED)
+                robot.linear_velocity = MAX_ROBOT_SPEED;
+        convert_robot_to_wheel_speed(robot_speed, wheel_speed);
+
+        /* Clear synchronization flag to switch pin on rs485 driver */
+        firstTransmitedFlag = false;
+        motor_wheel_1.set_wheel_speed(wheel_speed[0]);
+        motor_wheel_2.set_wheel_speed(wheel_speed[1]);
+        robot.code = Request::SET_SPEED;
+//        vTaskDelay(4);
+}
+
+void MotorManager::process_angle()
+{
+        float robot_position[3];
+
+        calculate_position();
+        robot_position[0] = robot.x;
+        robot_position[1] = robot.y;
+        robot_position[2] = robot.theta;
+
+        memcpy(position_byte_arr, robot_position, sizeof(position_byte_arr));
+}
+
+void MotorManager::process_speed()
+{
+        float r_vel_arr[2] {};
+
+//        convert_wheel_to_robot_speed();
+        r_vel_arr[0] = motor_wheel_1.options.speed;
+        r_vel_arr[1] = motor_wheel_2.options.speed;
+
+        memcpy(speed_byte_arr, r_vel_arr,sizeof(speed_byte_arr));
+}
+
+void MotorManager::process_current()
+{
+        if (motor_wheel_1.options.current_value > CURRENT_COLLISION_VALUE ||
+                        motor_wheel_2.options.current_value > CURRENT_COLLISION_VALUE)
+        {
+                robot.current_status = true;
+                set_robot_speed(STOP_MOTION, STOP_MOTION);
+                motor_wheel_1.options.current_value = 0;
+                motor_wheel_2.options.current_value = 0;
+
+        }
+}
+
+void MotorManager::process_error()
+{
+//        ToDO notify about;
+
+        if (motor_wheel_1.options.error_flag || motor_wheel_2.options.error_flag){
+                // Notify
+                motor_wheel_1.init_wheel();
+                motor_wheel_2.init_wheel();
+                set_robot_speed(STOP_MOTION, STOP_MOTION);
+        }
+}
+
+/* ------------------------------------------------------------
+ * Internal options
+ */
+MotorErrorStatus MotorManager::read_motors_aknowlege()
+{
+        bool m1, m2;
+        m1 = motor_wheel_1.read_response();
+        m2 = motor_wheel_2.read_response();
+        if (m1 && m2)
+                return MotorErrorStatus::OK;
+        else
+                return MotorErrorStatus::MOTORS_DONOT_ANSWER;
 }
 
 void MotorManager::convert_robot_to_wheel_speed(float* robArr, int16_t* wheel_arr)
@@ -57,20 +142,25 @@ void MotorManager::convert_robot_to_wheel_speed(float* robArr, int16_t* wheel_ar
 	float32_t buff[2];
 	buff[0] = (robArr[0] + robArr[1] * L_CENTER) * CONST_WHEEL_1 / R_WHEEL;
 	buff[1] = (robArr[0] - robArr[1] * L_CENTER) * CONST_WHEEL_2 / R_WHEEL;
-	for (uint8_t i = 0; i < 2; i ++) {
+	for (uint8_t i = 0; i < 2; i++) {
 		wheel_arr[i] = (int16_t) buff[i];
 
 		/* More accurate rounding */
 		if (buff[i] - 0.5 >= wheel_arr[i]) {
-			wheel_arr[i]++;
+			++wheel_arr[i];
 		} else if (buff[i] + 0.5 <= wheel_arr[i])
-			wheel_arr[i]--;
+			--wheel_arr[i];
 	}
+}
+
+void MotorManager::convert_wheel_to_robot_speed()
+{
+//        robot.linear_velocity = motor_wheel_1.options.speed;
 }
 
 void MotorManager::fetch_angle()
 {
-        static const float CONST_2_PI = 2 * PI;
+        static constexpr float CONST_2_PI = 2 * PI;
 
         if (robot.theta >= CONST_2_PI) {
                 robot.theta -= CONST_2_PI;
@@ -116,114 +206,42 @@ void MotorManager::calculate_position()
 	}
 }
 
-
-void MotorManager::set_robot_speed(uint8_t* byte_arr)
+/* ------------------------------------------------------------
+ * Request manager
+ */
+void MotorManager::send_next_request(uint8_t &current_code)
 {
-	for (uint8_t i = 0; i < 8; i++)
-	        speed_byte_arr[i]= byte_arr[i];
-	terminalRxFlag = true;
-}
-
-void MotorManager::get_robot_position(uint8_t* byte_arr)
-{
-	for (uint8_t i = 0; i < 12; i++)
-	        byte_arr[i] = position_byte_arr[i];
-}
-
-void MotorManager::send_next_request(uint8_t current_code)
-{
-        static uint8_t previouse_code = REG_READ_ANGLE_LOW;
-
+        static uint8_t cbuff = GET_ANGLE;
         /* Clear synchronization flag */
         firstTransmitedFlag = false;
-
-        if (current_code == REG_SET_SPEED)
-                current_code = previouse_code;
-
-        if (current_code == REG_READ_ANGLE_LOW) {
+        /* Send request for the next command */
+        if (current_code == Request::SET_SPEED) {
+                current_code = cbuff;
+                return;
+        } else if (current_code == Request::GET_ANGLE) {
                 motor_wheel_1.request_current();
                 motor_wheel_2.request_current();
-        } else if (current_code == REG_READ_CURRENT) {
+        } else if (current_code == Request::GET_CURRENT_STATUS) {
                 motor_wheel_1.request_error();
                 motor_wheel_2.request_error();
-        } else if (current_code == REG_ERROR_CODE) {
+        } else if (current_code == Request::GET_ERROR_STATUS) {
                 motor_wheel_1.request_angle();
                 motor_wheel_2.request_angle();
         }
-        previouse_code = current_code;
+
+        ++current_code;
+        if (current_code == Request::END_POSITION)
+                current_code = GET_ANGLE;
+        cbuff = current_code;
 }
 
-void MotorManager::set_robot_speed()
-{
-        float robot_speed[2];
-
-        /* Convert from byte array into linear and angular robot velocity */
-        memcpy(robot_speed, speed_byte_arr, sizeof(robot_speed));
-
-        /* If status was not processed */
-        if (!robot.current_status)
-                set_robot_speed(robot_speed[0], robot_speed[1]);
-}
-
-void MotorManager::set_robot_speed(float lin_vel, float ang_vel )
-{
-        float robot_speed[2];
-        int16_t wheel_speed[2];
-
-
-        /* Safety limitation on the robot speed */
-        if (lin_vel > MAX_ROBOT_SPEED)
-                robot.linear_velocity = MAX_ROBOT_SPEED;
-        convert_robot_to_wheel_speed(robot_speed, wheel_speed);
-
-        /* Clear synchronization flag */
-        firstTransmitedFlag = false;
-        motor_wheel_1.set_wheel_speed(wheel_speed[0]);
-        motor_wheel_2.set_wheel_speed(wheel_speed[1]);
-}
-
-void MotorManager::process_angle()
-{
-        float robot_position[3];
-
-        calculate_position();
-        robot_position[0] = robot.x;
-        robot_position[1] = robot.y;
-        robot_position[2] = robot.theta;
-
-        memcpy(position_byte_arr, robot_position, sizeof(position_byte_arr));
-}
-
-void MotorManager::process_current()
-{
-        if (motor_wheel_1.options.current_value > CURRENT_COLLISION_VALUE ||
-                        motor_wheel_2.options.current_value > CURRENT_COLLISION_VALUE)
-        {
-                robot.current_status = true;
-                set_robot_speed(STOP_MOTION, STOP_MOTION);
-        }
-}
-
-void MotorManager::process_error()
-{
-//                int16_t errBuff1 = motor1.uint8toInt16(rxRsDataArr[0]);
-//                int16_t errBuff2 = motor2.uint8toInt16(rxRsDataArr[1]);
-//                if (errBuff1 != 0 || errBuff2 != 0) {
-//                        for (i = 0; i < 2; i++) {
-//                                motArr[i]->modbusWriteReg(i + 1, REG_SET_SPEED, STOP_MOTION);
-//                                ulTaskNotifyTake(pdTRUE, oRTOS.fromMsToTick(4));
-//                        }
-//                        this->curColFlag = true;
-//                        setLEDTask->setColor(RED);
-//                        vTaskDelay(oRTOS.fromMsToTick(1000));
-//                        motorInit(1);
-//                        motorInit(2);
-}
-
+/* ------------------------------------------------------------
+ * Task body
+ */
 void MotorManager::run()
 {
         TickType_t pxPreviousWakeTime;
-	uint8_t code = 0;
+        robot.code = Request::GET_ANGLE;
 	MotorErrorStatus status;
 
 	/* Peripheral initialization */
@@ -232,7 +250,7 @@ void MotorManager::run()
 
 	/* Switch pin for rs485 driver */
 	motor_wheel_1.gpioSwitchInit(GPIOB, GPIO_Pin_12);
-        motor_wheel_2.gpioSwitchInit(GPIOB, GPIO_Pin_12);
+        motor_wheel_2.gpioSwitchInit(GPIOA, GPIO_Pin_4);
 
 	/* Should be after peripheral init */
 	motor_wheel_1.init_wheel();
@@ -244,29 +262,31 @@ void MotorManager::run()
 	        /* Function for accurate task sleep time */
 	        pxPreviousWakeTime = xTaskGetTickCount();
 
-	        status = read_motors_aknowlege(code);
+	        status = read_motors_aknowlege();
 	        if (status == MotorErrorStatus::OK) {
 
 	                /* If command from high level has come set speed */
 	                if (terminalRxFlag) {
 	                        set_robot_speed();
-	                } else if (code == REG_READ_ANGLE_LOW) {
+	                } else if (robot.code == Request::GET_ANGLE) {
 	                        process_angle();
-	                } else if (code == REG_READ_CURRENT) {
+	                } else if (robot.code == Request::GET_CURRENT_STATUS) {
 	                        process_current();
-                        } else if (code == REG_ERROR_CODE)
+	                } else if (robot.code == Request::GET_ERROR_STATUS) {
                                 process_error();
+                        }
 
-	                send_next_request(code);
+	                send_next_request(robot.code);
 	        } else {
-	                uint8_t c = 10;
+	                uint8_t c = 3;
 	                while (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_15) && c) {
 	                        robot.button_status = true;
 
 	                        /* LED indication, motors do not answer */
 	                        ledRgb.mutex_take(RED);
+	                        set_robot_speed(STOP_MOTION, STOP_MOTION);
 	                        c--;
-	                        vTaskDelay(1);
+	                        vTaskDelay(5);
 	                }
 	                if (!c) {
 	                        //ToDo error processing, motors do not work
@@ -278,7 +298,7 @@ void MotorManager::run()
 	                ledRgb.mutex_take(RED_FLASH);
 	                do {
 	                        robot.button_status = true;
-	                        vTaskDelay(1);
+	                        vTaskDelay(5);
 	                } while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_15));
 	                ledRgb.mutex_give();
 
@@ -293,10 +313,13 @@ void MotorManager::run()
 	                motor_wheel_2.init_wheel();
 	                set_robot_speed(STOP_MOTION, STOP_MOTION);
 	        }
-	        vTaskDelayUntil(&pxPreviousWakeTime, TIME_FOR_RESPONCE);
+	        vTaskDelayUntil(&pxPreviousWakeTime, 4);
 	}
 }
 
+/* ------------------------------------------------------------
+ * Peripheral interrupts
+ */
 extern "C"
 {
 //---------------------------WHEEL_1---------------------------------//
@@ -311,7 +334,7 @@ extern "C"
 		}
 		if (USART_GetITStatus(USART3, USART_IT_TC)) {
 			USART_ClearITPendingBit(USART3, USART_IT_TC);
-			mot_manager.switch_to_receive();
+			GPIO_ResetBits(GPIOB, GPIO_Pin_12);
 		}
 		if (xHigherPriorityTaskWoken)
 			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);		// Run Higher priority task if exist													// between ticks
@@ -348,7 +371,7 @@ extern "C"
 		}
 		if (USART_GetITStatus(UART4, USART_IT_TC)){
 			USART_ClearITPendingBit(UART4, USART_IT_TC);
-			mot_manager.switch_to_receive();
+			GPIO_ResetBits(GPIOA, GPIO_Pin_4);
 		}
 		if (xHigherPriorityTaskWoken)					// Run Higher priority task if exist
 			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);		// between ticks

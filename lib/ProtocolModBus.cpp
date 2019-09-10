@@ -90,32 +90,38 @@ void ProtocolModBus::modbus_send_package(uint8_t size_arr)
         usart_send(usartTxArr, pac_size);
 }
 
-void ProtocolModBus::modbus_receive_package(uint8_t &id, uint8_t &code,
-                int16_t* data_arr, uint8_t &arr_size)
+bool ProtocolModBus::modbus_receive_package(uint8_t& id, int16_t* data_arr, uint8_t& arr_size)
 {
-        uint16_t crc = 0;
-        uint16_t crc_rx = 0;
-        uint16_t pack_size = 4;
+        uint16_t crc {};
+        uint16_t crc_rx {};
+
+        /* Option for error processing */
+        uint16_t pack_size {4};
 
         id = usartRxArr[0];
-        code = usartRxArr[1];
-        if (code == READ_HOLDING_REG) {
-                arr_size = usartRxArr[2];
-                pack_size = arr_size + 3;
+        uint8_t code = usartRxArr[1];
+        if (code == 0) {
+                return false;
+        } else if (code == READ_HOLDING_REG) {
+                pack_size = usartRxArr[2] + 3;
 
-                /* ToDO check is it work? */
+                crc_rx = crc_calculate(usartRxArr, pack_size);
                 crc |= (uint16_t) usartRxArr[pack_size++];
                 crc |= ((uint16_t) usartRxArr[pack_size++]) << 8;
-                crc_rx = crc_calculate(usartRxArr, pack_size);
                 if (crc == crc_rx) {
-                        int16_t pac_arr[arr_size];
-                        memcpy(pac_arr, usartRxArr, sizeof(pac_arr));
+                        uint8_t j = 2;
+                        arr_size = usartRxArr[2] / 2;
+                        for (uint8_t i = 0; i < arr_size; ++i) {
+                                data_arr[i] = {0};
+                                data_arr[i] |= ((uint16_t) usartRxArr[++j]) << 8;
+                                data_arr[i] |= usartRxArr[++j];
+                        }
                 } else {
                         // ToDo error checksumm
                 }
-                for (uint8_t i = 0; i < pack_size; i++)
-                        usartRxArr[i] = 0;
         }
         for (uint8_t i = 0; i < pack_size; i++)
                 usartRxArr[i] = 0;
+
+        return true;
 }
