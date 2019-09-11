@@ -49,7 +49,7 @@ void I2c1Manager::run()
                 imu.read_accelerations(robot.acceleration);
                 memcpy(hl_acc_byte_arr, robot.acceleration, sizeof(hl_acc_byte_arr));
 
-                imu.read_angular_velocity(robot.magnet_field);
+                imu.read_angular_velocity(robot.angular_velocity);
                 memcpy(hl_gyr_byte_arr, robot.angular_velocity, sizeof(hl_gyr_byte_arr));
 
 //                vTaskDelayUntil(&pxPreviousWakeTime, 10);

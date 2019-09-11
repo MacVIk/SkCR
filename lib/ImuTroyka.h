@@ -32,9 +32,6 @@
 
 class ImuTroyka: public DriverI2C {
 public:
-        ImuTroyka();
-        virtual ~ImuTroyka();
-
         void init_imu();
         void read_accelerations(float* acc_arr);
         void read_angular_velocity(float* gyr_arr);

@@ -7,15 +7,6 @@
 
 #include "ImuTroyka.h"
 
-ImuTroyka::ImuTroyka() {
-        // TODO Auto-generated constructor stub
-
-}
-
-ImuTroyka::~ImuTroyka() {
-        // TODO Auto-generated destructor stub
-}
-
 #include <string.h>
 
 static constexpr float const_acc = 2.f * 9.8f / 32767.f;
@@ -58,7 +49,7 @@ void ImuTroyka::read_accelerations(float* acc_arr)
         read_i2c(ACCELEROMETER_ADDR, ACCELEROMETER_OUT_X_L | 1 << 7, 6, i2c_byte_arr);
         memcpy(buff_arr, i2c_byte_arr, sizeof(buff_arr));
         for (uint8_t i = 0; i < 3; ++i)
-                acc_arr[i] = buff_arr[i] * const_acc * 0.001f;
+                acc_arr[i] = buff_arr[i] * const_acc;
 }
 
 void ImuTroyka::read_angular_velocity(float* gyr_arr)
@@ -69,5 +60,5 @@ void ImuTroyka::read_angular_velocity(float* gyr_arr)
         read_i2c(GYROSCOPE_ADDR, GYROSCOPE_OUT_X_L | 1 << 7, 6, i2c_byte_arr);
         memcpy(buff_arr, i2c_byte_arr, sizeof(buff_arr));
         for (uint8_t i = 0; i < 3; ++i)
-                gyr_arr[i] = buff_arr[i] * const_gyro * 0.001f;
+                gyr_arr[i] = buff_arr[i] * const_gyro;
 }
