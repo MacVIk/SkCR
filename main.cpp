@@ -68,6 +68,7 @@ void system_clock_config()
 #include "RangefinderManager.h"
 #include "BatteryManager.h"
 #include "MotorManager.h"
+#include "I2c1Manager.h"
 #include "LedRgb.h"
 
 int main(void) {
@@ -75,20 +76,18 @@ int main(void) {
         /* Set clocking frequency */
         system_clock_config();
 
-        /* Terminal task creation */
         terminal.task_create(256, 2, "Terminal");
 //        xTaskCreate(terminal.run, "run", 256, NULL, 1, NULL);
 
-        /* BatteryManager task creation */
         bat_manager.task_create(256, 1, "Battery");
 //        xTaskCreate(rf_manager.run, "run", 256, NULL, 1, NULL);
 
-        /* RangefinderManager task creation */
         rf_manager.task_create(512, 1, "Rangefinder");
 //        xTaskCreate(bat_manager.run, "run", 512, NULL, 1, NULL);
 
-        /* Motors control task creation */
         mot_manager.task_create(2048, 1, "Motors");
+
+        i2c_manager.task_create(1024, 1, "I2C");
 
         /* Robot LED initialisatin */
         ledRgb.init_led();
