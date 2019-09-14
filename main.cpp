@@ -77,13 +77,10 @@ int main(void) {
         system_clock_config();
 
         terminal.task_create(256, 2, "Terminal");
-//        xTaskCreate(terminal.run, "run", 256, NULL, 1, NULL);
 
         bat_manager.task_create(256, 1, "Battery");
-//        xTaskCreate(rf_manager.run, "run", 256, NULL, 1, NULL);
 
         rf_manager.task_create(512, 1, "Rangefinder");
-//        xTaskCreate(bat_manager.run, "run", 512, NULL, 1, NULL);
 
         mot_manager.task_create(2048, 1, "Motors");
 

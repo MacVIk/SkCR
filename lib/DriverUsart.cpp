@@ -14,15 +14,18 @@
 #include "DriverUsart.h"
 
 DriverUsart::DriverUsart() {
-        nvicPort = GPIOA;
-        nvicPin = 0;
-        txStream = DMA1_Stream1;
-        pointer = 0;
 }
 
 DriverUsart::~DriverUsart() {
 	// TODO Auto-generated destructor stub
 }
+
+ uint8_t DriverUsart::usart_3_Rx_Arr[MAX_MESSEGE_LENGTH_RX];
+ uint8_t DriverUsart::usart_3_Tx_Arr[MAX_MESSEGE_LENGTH_RX];
+ uint8_t DriverUsart::uart_4_Rx_Arr[MAX_MESSEGE_LENGTH_RX];
+ uint8_t DriverUsart::uart_4_Tx_Arr[MAX_MESSEGE_LENGTH_RX];
+ uint8_t DriverUsart::usart_6_Rx_Arr[MAX_MESSEGE_LENGTH_RX];
+ uint8_t DriverUsart::usart_6_Tx_Arr[MAX_MESSEGE_LENGTH_RX];
 
 void DriverUsart::init_gpio(GPIO_TypeDef* GPIOx, uint16_t rxPin, uint16_t txPin, uint8_t af)
 {
@@ -90,11 +93,11 @@ void DriverUsart::init_dma(USART_TypeDef* USARTx)
 		txNvic = DMA2_Stream6_IRQn;
 		DMA_Chanel = DMA_Channel_5;
 	}
-	this->txStream = txStream;
+	usart.txStream = txStream;
 
 	DMA_StructInit(&DmaRxUart);
 	DmaRxUart.DMA_PeripheralBaseAddr = (uint32_t)&(USARTx->DR);
-	DmaRxUart.DMA_Memory0BaseAddr = (uint32_t) &(this->usartRxArr[0]);
+	DmaRxUart.DMA_Memory0BaseAddr = (uint32_t) usart.RxArr;
 	DmaRxUart.DMA_Channel = DMA_Chanel;
 	DmaRxUart.DMA_DIR = DMA_DIR_PeripheralToMemory;
 	DmaRxUart.DMA_BufferSize = 20;
@@ -108,7 +111,7 @@ void DriverUsart::init_dma(USART_TypeDef* USARTx)
 
 	DMA_StructInit(&DmaTxUart);
 	DmaTxUart.DMA_PeripheralBaseAddr = (uint32_t)&(USARTx->DR);
-	DmaTxUart.DMA_Memory0BaseAddr = (uint32_t)&(this->usartTxArr[0]);
+	DmaTxUart.DMA_Memory0BaseAddr = (uint32_t) usart.TxArr;
 	DmaTxUart.DMA_Channel = DMA_Chanel;
 	DmaTxUart.DMA_DIR = DMA_DIR_MemoryToPeripheral;
 	DmaTxUart.DMA_BufferSize = 20;
@@ -140,7 +143,6 @@ void DriverUsart::init_usart(GPIO_TypeDef* GPIOx, USART_TypeDef* USARTx, bool rs
 	IRQn_Type USARTx_IRQn;
 
 //	this->nvicUart = USARTx;
-	init_dma(USARTx);
 
 	if (GPIOx == GPIOB && USARTx == USART3) {
 		init_gpio(GPIOx, GPIO_Pin_11, GPIO_Pin_10, GPIO_AF_USART3);
@@ -151,14 +153,23 @@ void DriverUsart::init_usart(GPIO_TypeDef* GPIOx, USART_TypeDef* USARTx, bool rs
 
 	if (USARTx == USART3) {
 		RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
+		usart.RxArr = &usart_3_Rx_Arr[0];
+		usart.TxArr = &usart_3_Tx_Arr[0];
 		USARTx_IRQn = USART3_IRQn;
 	} else if (USARTx == USART6) {
 		RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART6, ENABLE);
+		usart.RxArr = &usart_6_Rx_Arr[0];
+                usart.TxArr = &usart_6_Tx_Arr[0];
 		USARTx_IRQn = USART6_IRQn;
 	} else if (USARTx == UART4) {
 		RCC_APB1PeriphClockCmd(RCC_APB1Periph_UART4, ENABLE);
+		usart.RxArr = &uart_4_Rx_Arr[0];
+		usart.TxArr = &uart_4_Tx_Arr[0];
 		USARTx_IRQn = UART4_IRQn;
 	}
+
+        init_dma(USARTx);
+
 	USART.USART_BaudRate = 115200;
 	USART.USART_StopBits = USART_StopBits_1;
 	USART.USART_WordLength = USART_WordLength_8b;
@@ -190,8 +201,8 @@ void DriverUsart::init_usart(GPIO_TypeDef* GPIOx, USART_TypeDef* USARTx, bool rs
 void DriverUsart::gpioSwitchInit(GPIO_TypeDef* GPIOx, uint16_t swPin)
 {
 	GPIO_InitTypeDef RxTxPin;
-	nvicPin = swPin;
-	nvicPort = GPIOx;
+	usart.nvicPin = swPin;
+	usart.nvicPort = GPIOx;
 	if (GPIOx == GPIOB)
 		RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
 	RxTxPin.GPIO_Pin = swPin;
@@ -213,30 +224,31 @@ void DriverUsart::gpioSwitchInit(GPIO_TypeDef* GPIOx, uint16_t swPin)
 
 void DriverUsart::usart_send(uint8_t* sendArr, uint8_t length)
 {
-	if (DMA_GetCmdStatus(txStream))
-		DMA_Cmd(txStream, DISABLE);
-	GPIO_SetBits(nvicPort, nvicPin);
-	if (txStream->M0AR != (uint32_t) sendArr)
-		txStream->M0AR = (uint32_t) sendArr;
-	DMA_SetCurrDataCounter(txStream, length);
-	DMA_Cmd(txStream, ENABLE);
+        //ToDo probably refer to a nonexistent array
+	if (DMA_GetCmdStatus(usart.txStream))
+		DMA_Cmd(usart.txStream, DISABLE);
+	GPIO_SetBits(usart.nvicPort, usart.nvicPin);
+	for (uint8_t i = 0; i < length; ++i)
+	        usart.TxArr[i] = sendArr[i];
+	DMA_SetCurrDataCounter(usart.txStream, length);
+	DMA_Cmd(usart.txStream, ENABLE);
 }
 
 uint8_t DriverUsart::usart_receive_byte()
 {
-	return usartRxArr[pointer++];
+	return usart.RxArr[usart.pointer++];
 }
 
-uint8_t DriverUsart::usart_get_rx_arr_size()
+uint8_t DriverUsart::usart_get_recieved_size()
 {
-        return pointer;
+        return usart.pointer;
 }
 
 void DriverUsart::usart_stop_receiving()
 {
-        for (uint8_t i = 0; i < pointer; i ++)
-                usartRxArr[pointer] = 0;
-	pointer = 0;
+        for (uint8_t i = 0; i < usart.pointer; ++i)
+                usart.RxArr[usart.pointer] = 0;
+        usart.pointer = 0;
 }
 
 

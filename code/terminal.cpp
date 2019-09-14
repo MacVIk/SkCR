@@ -23,6 +23,8 @@
 
 Terminal terminal;
 static DriverUsart uart_6;
+static uint8_t uart_rx_arr[24];
+static uint8_t uart_tx_arr[24];
 
 void Terminal::add_error_byte(uint8_t& answerLength)
 {
@@ -33,15 +35,15 @@ void Terminal::add_error_byte(uint8_t& answerLength)
                 err_byte |= 1 << 1;
         //        if (collisionHandler->getStatus())
         //                err_byte |= 1 << 2;
-        uart_6.usartTxArr[answerLength++] = err_byte;
-        //        uart_6.usartTxArr[++answerLength] = 0;
+        uart_tx_arr[answerLength++] = err_byte;
+        //       uart_tx_arr[++answerLength] = 0;
 }
 
 void Terminal::calculate_checksum(uint8_t answerLength)
 {
-        uart_6.usartTxArr[answerLength] = 0;
+        uart_tx_arr[answerLength] = 0;
         for (uint8_t i = 0; i < answerLength; ++i)
-                uart_6.usartTxArr[answerLength] += uart_6.usartTxArr[i];
+                uart_tx_arr[answerLength] +=uart_tx_arr[i];
 }
 
 void Terminal::run()
@@ -55,51 +57,55 @@ void Terminal::run()
                 /* Task is suspended until notification */
                 ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-                if (uart_6.usartRxArr[0] == HighLvlCommand::ECHO) {
-                        uart_6.usartTxArr[0] = 0x11;
+                uint8_t commad = uart_6.usart_receive_byte();
+
+                if (commad == HighLvlCommand::ECHO) {
+                        uart_tx_arr[0] = 0x11;
                         answerLength = 1;
 
-                } else if (uart_6.usartRxArr[0] == HighLvlCommand::SET_COLOR) {
-                        ledRgb.set_color((cl) uart_6.usartRxArr[1]);
-                        uart_6.usartTxArr[0] = 0;
+                } else if (commad == HighLvlCommand::SET_COLOR) {
+                        uart_rx_arr[0] = uart_6.usart_receive_byte();
+                        ledRgb.set_color((cl) uart_rx_arr[0]);
                         answerLength = 1;
 
-                } else if (uart_6.usartRxArr[0] == HighLvlCommand::GET_BATTERY_CHARGE) {
-                        uart_6.usartTxArr[0] = bat_manager.get_charge();
+                } else if (commad == HighLvlCommand::GET_BATTERY_CHARGE) {
+                        uart_tx_arr[0] = bat_manager.get_charge();
                         answerLength = 1;
 
-                } else if (uart_6.usartRxArr[0] == HighLvlCommand::GET_DISTANCE) {
-                        rf_manager.get_distance(uart_6.usartTxArr);
+                } else if (commad == HighLvlCommand::GET_DISTANCE) {
+                        rf_manager.get_distance(uart_tx_arr);
                         answerLength = RANGEFINDERS_NUMBER;
 
-                } else if (uart_6.usartRxArr[0] == HighLvlCommand::SET_ROBOT_SPEED) {
-                        mot_manager.set_robot_speed(&uart_6.usartRxArr[1]);
+                } else if (commad == HighLvlCommand::SET_ROBOT_SPEED) {
+                        for (uint8_t i = 0; i < 8; i++)
+                                uart_rx_arr[i] = uart_6.usart_receive_byte();
+                        mot_manager.set_robot_speed(uart_rx_arr);
                         answerLength = 1;
 
                         /* Receive from RS485 ----- (x, y, theta) */
-                } else if (uart_6.usartRxArr[0] == HighLvlCommand::GET_ROBOT_POSITION) {
-                        mot_manager.get_robot_position(uart_6.usartTxArr);
+                } else if (commad == HighLvlCommand::GET_ROBOT_POSITION) {
+                        mot_manager.get_robot_position(uart_tx_arr);
                         answerLength = 12;
 
                         /* Receive from IMU ----- (x, y, theta) */
-                } else if (uart_6.usartRxArr[0] == HighLvlCommand::GET_ACCELERATION) {
-                        i2c_manager.get_acceleration(uart_6.usartTxArr);
+                } else if (commad == HighLvlCommand::GET_ACCELERATION) {
+                        i2c_manager.get_acceleration(uart_tx_arr);
                         answerLength = 12;
 
-                } else if (uart_6.usartRxArr[0] == HighLvlCommand::GET_ANG_VEL) {
-                        i2c_manager.get_angular_velocity(uart_6.usartTxArr);
+                } else if (commad == HighLvlCommand::GET_ANG_VEL) {
+                        i2c_manager.get_angular_velocity(uart_tx_arr);
                         answerLength = 12;
 
                 } else {
-                        uart_6.usartTxArr[0] = 0xff;
-                        uart_6.usartTxArr[1] = uart_6.usartTxArr[0];
+                        uart_tx_arr[0] = 0xff;
                         answerLength = 1;
                 }
 
                 add_error_byte(answerLength);
                 calculate_checksum(answerLength);
 
-                uart_6.usart_send(uart_6.usartTxArr, ++answerLength);
+                uart_6.usart_send(uart_tx_arr, ++answerLength);
+                uart_6.usart_stop_receiving();
 
                 /* Finish the task before next tick */
                 taskYIELD();

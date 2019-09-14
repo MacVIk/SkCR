@@ -10,8 +10,19 @@
 
 #include "stm32f4xx.h"
 
-#define MAX_MESSEGE_LENGTH_RX   32
-#define MAX_MESSEGE_LENGTH_TX   32
+#define MAX_MESSEGE_LENGTH_RX   24
+#define MAX_MESSEGE_LENGTH_TX   24
+
+struct UsartOptions {
+        GPIO_TypeDef* nvicPort;
+        DMA_Stream_TypeDef* txStream;
+        uint16_t nvicPin;
+        uint8_t pointer;
+
+        /* Should refer to the specific usart arr */
+        uint8_t* RxArr;
+        uint8_t* TxArr;
+};
 
 class DriverUsart {
 public:
@@ -22,28 +33,29 @@ public:
         void init_usart(GPIO_TypeDef* GPIOx, USART_TypeDef* USARTx, bool rsStatus);
         void gpioSwitchInit(GPIO_TypeDef* GPIOx, uint16_t swPin);
 //	void UARTx_IRQnFunc();
+
 	/* Interface */
 	void usart_send(uint8_t* sendArr, uint8_t length);
 	uint8_t usart_receive_byte();
-	uint8_t usart_get_rx_arr_size();
+	uint8_t usart_get_recieved_size();
 	void usart_stop_receiving();
 
-//protected:
+protected:
 	/* ToDO fix this */
-	uint8_t usartRxArr[MAX_MESSEGE_LENGTH_RX];
-	uint8_t usartTxArr[MAX_MESSEGE_LENGTH_TX];
+	UsartOptions usart;
+
 private:
         /* Peripheral initialization */
         void init_gpio(GPIO_TypeDef* GPIOx, uint16_t rxPin, uint16_t txPin, uint8_t af);
         void init_dma(USART_TypeDef* USARTx);
 
-//	USART_TypeDef* nvicUart;
-
-	/* Peripheral for user functions */
-	GPIO_TypeDef* nvicPort;
-	uint16_t nvicPin;
-	DMA_Stream_TypeDef* txStream;
-	uint8_t pointer;
+	/* Protection from multiple USART initialization */
+        static uint8_t usart_3_Rx_Arr[MAX_MESSEGE_LENGTH_RX];
+        static uint8_t usart_3_Tx_Arr[MAX_MESSEGE_LENGTH_RX];
+        static uint8_t uart_4_Rx_Arr[MAX_MESSEGE_LENGTH_RX];
+        static uint8_t uart_4_Tx_Arr[MAX_MESSEGE_LENGTH_RX];
+        static uint8_t usart_6_Rx_Arr[MAX_MESSEGE_LENGTH_RX];
+        static uint8_t usart_6_Tx_Arr[MAX_MESSEGE_LENGTH_RX];
 
 };
 
