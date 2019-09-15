@@ -26,7 +26,7 @@ static DriverUsart uart_6;
 static uint8_t uart_rx_arr[24];
 static uint8_t uart_tx_arr[24];
 
-void Terminal::add_error_byte(uint8_t& answerLength)
+inline void Terminal::add_error_byte(uint8_t& answerLength)
 {
         uint8_t err_byte = 0;
         if (mot_manager.get_robot_button_status())
@@ -39,7 +39,7 @@ void Terminal::add_error_byte(uint8_t& answerLength)
         //       uart_tx_arr[++answerLength] = 0;
 }
 
-void Terminal::calculate_checksum(uint8_t answerLength)
+inline void Terminal::calculate_checksum(uint8_t answerLength)
 {
         uart_tx_arr[answerLength] = 0;
         for (uint8_t i = 0; i < answerLength; ++i)
@@ -105,6 +105,8 @@ void Terminal::run()
                 calculate_checksum(answerLength);
 
                 uart_6.usart_send(uart_tx_arr, ++answerLength);
+
+                //ToDo replace it into interrupt
                 uart_6.usart_stop_receiving();
 
                 /* Finish the task before next tick */
@@ -119,21 +121,21 @@ void USART6_IRQHandler(void)
 {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;			// Notify task about interrupt
         if (USART_GetITStatus(USART6, USART_IT_IDLE)) {			// Clear IDLE flag step 1
-                DMA_Cmd(DMA2_Stream1, DISABLE);						// DMA turn off to clear DMA1 counter
-                USART_ReceiveData(USART6);							// Clear IDLE flag step 2
+                DMA_Cmd(DMA2_Stream1, DISABLE);				// DMA turn off to clear DMA1 counter
+                USART_ReceiveData(USART6);				// Clear IDLE flag step 2
         }
-        if (xHigherPriorityTaskWoken)							// Run Higher priority task if exist
+        if (xHigherPriorityTaskWoken)					// Run Higher priority task if exist
                 portYIELD_FROM_ISR(xHigherPriorityTaskWoken);		// between ticks
 }
 //***********************DMA_RECEIVE_INTERRUPT******************//
 void DMA2_Stream1_IRQHandler(void)
 {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;			// Notify task about interrupt
-        vTaskNotifyGiveFromISR(terminal.task_handle,	// Notify USART task about receiving
+        vTaskNotifyGiveFromISR(terminal.task_handle,	                // Notify USART task about receiving
                         &xHigherPriorityTaskWoken);
         DMA_ClearITPendingBit(DMA2_Stream1, DMA_IT_TCIF1);		// Clear DMA "transmitting complete" interrupt
-        DMA_Cmd(DMA2_Stream1, ENABLE);							// Reset DMA
-        if (xHigherPriorityTaskWoken)							// Run Higher priority task if exist
+        DMA_Cmd(DMA2_Stream1, ENABLE);					// Reset DMA
+        if (xHigherPriorityTaskWoken)					// Run Higher priority task if exist
                 portYIELD_FROM_ISR(xHigherPriorityTaskWoken);		// between ticks
 }
 //***********************DMA_TRANSMIT_INTERRUPT*****************//
@@ -141,8 +143,8 @@ void DMA2_Stream6_IRQHandler(void)
 {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;			// Notify task about interrupt
         DMA_ClearITPendingBit(DMA2_Stream6, DMA_IT_TCIF6);		// Clear DMA "transmission complete" interrupt
-        DMA_Cmd(DMA2_Stream6, DISABLE);							// Stop DMA transmitting
-        if (xHigherPriorityTaskWoken)							// Run Higher priority task if exist
+        DMA_Cmd(DMA2_Stream6, DISABLE);					// Stop DMA transmitting
+        if (xHigherPriorityTaskWoken)					// Run Higher priority task if exist
                 portYIELD_FROM_ISR(xHigherPriorityTaskWoken);		// between ticks
 }
 }

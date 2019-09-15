@@ -210,21 +210,9 @@ void DriverUsart::gpioSwitchInit(GPIO_TypeDef* GPIOx, uint16_t swPin)
 	RxTxPin.GPIO_OType = GPIO_OType_PP;
 	GPIO_Init(GPIOx, &RxTxPin);
 }
-//void DriverUsart::UARTx_IRQnFunc()
-//{
-//	if (USART_GetITStatus(nvicUart, USART_IT_IDLE)){			// Clear IDLE flag step 1
-//		DMA_Cmd(nvicStream, DISABLE);							// DMA turn off to clear DMA1 counter
-//		USART_ReceiveData(nvicUart);							// Clear IDLE flag step 2
-//	}
-//	if (USART_GetITStatus(nvicUart, USART_IT_TC)){
-//		USART_ClearITPendingBit(nvicUart, USART_IT_TC);
-//		GPIO_ResetBits(nvicPort, nvicPin);
-//	}
-//}
 
 void DriverUsart::usart_send(uint8_t* sendArr, uint8_t length)
 {
-        //ToDo probably refer to a nonexistent array
 	if (DMA_GetCmdStatus(usart.txStream))
 		DMA_Cmd(usart.txStream, DISABLE);
 	GPIO_SetBits(usart.nvicPort, usart.nvicPin);
@@ -233,23 +221,23 @@ void DriverUsart::usart_send(uint8_t* sendArr, uint8_t length)
 	DMA_SetCurrDataCounter(usart.txStream, length);
 	DMA_Cmd(usart.txStream, ENABLE);
 }
-
-uint8_t DriverUsart::usart_receive_byte()
-{
-	return usart.RxArr[usart.pointer++];
-}
-
-uint8_t DriverUsart::usart_get_recieved_size()
-{
-        return usart.pointer;
-}
-
-void DriverUsart::usart_stop_receiving()
-{
-        for (uint8_t i = 0; i < usart.pointer; ++i)
-                usart.RxArr[usart.pointer] = 0;
-        usart.pointer = 0;
-}
+//
+//uint8_t DriverUsart::usart_receive_byte()
+//{
+//	return usart.RxArr[usart.pointer++];
+//}
+//
+//uint8_t DriverUsart::usart_get_recieved_size()
+//{
+//        return usart.pointer;
+//}
+//
+//void DriverUsart::usart_stop_receiving()
+//{
+//        for (uint8_t i = 0; i < usart.pointer; ++i)
+//                usart.RxArr[usart.pointer] = 0;
+//        usart.pointer = 0;
+//}
 
 
 

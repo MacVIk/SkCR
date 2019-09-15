@@ -36,12 +36,22 @@ public:
 
 	/* Interface */
 	void usart_send(uint8_t* sendArr, uint8_t length);
-	uint8_t usart_receive_byte();
-	uint8_t usart_get_recieved_size();
-	void usart_stop_receiving();
+	inline uint8_t usart_receive_byte()
+	{
+	        return usart.RxArr[usart.pointer++];
+	}
+	inline uint8_t usart_get_recieved_size()
+	{
+	        return usart.pointer;
+	}
+	inline void usart_stop_receiving()
+	{
+	        for (uint8_t i = 0; i < usart.pointer; ++i)
+	                        usart.RxArr[usart.pointer] = 0;
+	                usart.pointer = 0;
+	}
 
 protected:
-	/* ToDO fix this */
 	UsartOptions usart;
 
 private:
