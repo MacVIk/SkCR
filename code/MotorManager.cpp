@@ -81,18 +81,23 @@ void MotorManager::set_robot_speed(float lin_vel, float ang_vel )
                 robot.linear_velocity = MAX_ROBOT_SPEED;
         convert_robot_to_wheel_speed(robot_speed, wheel_speed);
 
-        /* Clear synchronization flag to switch pin on rs485 driver */
-        motor_wheel_1.set_wheel_speed(wheel_speed[0]);
-        motor_wheel_2.set_wheel_speed(wheel_speed[1]);
-        robot.code = Request::SET_SPEED;
-//        vTaskDelay(4);
+        bool ms1 {motor_wheel_1.set_wheel_speed(wheel_speed[0])};
+        bool ms2 {motor_wheel_2.set_wheel_speed(wheel_speed[1])};
+        if (!ms1 || !ms2)
+                process_error();
 }
 
 void MotorManager::process_angle()
 {
         float robot_position[3];
+        int32_t wh_arr[2];
 
-        calculate_position();
+        bool ms1 {motor_wheel_1.request_angle(wh_arr[0])};
+        bool ms2 {motor_wheel_2.request_angle(wh_arr[1])};
+        if (!ms1 || !ms2)
+                        process_error();
+
+        calculate_position(wh_arr);
         robot_position[0] = robot.x;
         robot_position[1] = robot.y;
         robot_position[2] = robot.theta;
@@ -102,55 +107,39 @@ void MotorManager::process_angle()
 
 void MotorManager::process_speed()
 {
-        float r_vel_arr[2] {};
+        int16_t r_vel_arr[2];
 
 //        convert_wheel_to_robot_speed();
-        r_vel_arr[0] = motor_wheel_1.options.speed;
-        r_vel_arr[1] = motor_wheel_2.options.speed;
+        motor_wheel_1.request_wheel_speed(r_vel_arr[0]);
+        motor_wheel_2.request_wheel_speed(r_vel_arr[1]);
+
+
 //incorrect
 //        memcpy(speed_byte_arr, r_vel_arr,sizeof(speed_byte_arr));
 }
 
 void MotorManager::process_current()
 {
-        if (motor_wheel_1.options.current_value > CURRENT_COLLISION_VALUE ||
-                        motor_wheel_2.options.current_value > CURRENT_COLLISION_VALUE)
+        int16_t cur_val[2];
+        bool ms1 {motor_wheel_1.request_current(cur_val[0])};
+        bool ms2 {motor_wheel_2.request_current(cur_val[1])};
+        if (!ms1 || !ms2)
+                        process_error();
+
+        if (cur_val[0] > CURRENT_COLLISION_VALUE ||
+                        cur_val[2] > CURRENT_COLLISION_VALUE)
         {
                 robot.current_status = true;
                 set_robot_speed(STOP_MOTION, STOP_MOTION);
-                motor_wheel_1.options.current_value = 0;
-                motor_wheel_2.options.current_value = 0;
 
-        }
-}
-
-void MotorManager::process_error()
-{
-//        ToDO notify about;
-
-        if (motor_wheel_1.options.error_flag || motor_wheel_2.options.error_flag){
-                // Notify
-                motor_wheel_1.init_wheel();
-                motor_wheel_2.init_wheel();
-                set_robot_speed(STOP_MOTION, STOP_MOTION);
         }
 }
 
 /* ------------------------------------------------------------
  * Internal options
  */
-MotorErrorStatus MotorManager::read_motors_aknowlege()
-{
-        bool m1, m2;
-        m1 = motor_wheel_1.read_response();
-        m2 = motor_wheel_2.read_response();
-        if (m1 && m2)
-                return MotorErrorStatus::OK;
-        else
-                return MotorErrorStatus::MOTORS_DONOT_ANSWER;
-}
 
-void MotorManager::convert_robot_to_wheel_speed(float* robArr, int16_t* wheel_arr)
+inline void MotorManager::convert_robot_to_wheel_speed(float* robArr, int16_t* wheel_arr)
 {
 	float32_t buff[2];
 	buff[0] = (robArr[0] + robArr[1] * L_CENTER) * CONST_WHEEL_1 / R_WHEEL;
@@ -171,7 +160,7 @@ void MotorManager::convert_wheel_to_robot_speed()
 //        robot.linear_velocity = motor_wheel_1.options.speed;
 }
 
-void MotorManager::fetch_angle()
+inline void MotorManager::fetch_angle()
 {
         static constexpr float CONST_2_PI = 2 * PI;
 
@@ -181,11 +170,9 @@ void MotorManager::fetch_angle()
                 robot.theta += CONST_2_PI;
 }
 
-void MotorManager::calculate_position()
+void MotorManager::calculate_position(int32_t* wheel_arr)
 {
         static int32_t wheel_arr_prev[] = {0, 0};
-        int32_t wheel_arr[] = {motor_wheel_1.options.angle,
-                        motor_wheel_2.options.angle};
 
 	float d_wheel_angle[2] = {0};
 	float d_theta = 0;
@@ -219,36 +206,23 @@ void MotorManager::calculate_position()
 	}
 }
 
-/* ------------------------------------------------------------
- * Request manager
- */
-void MotorManager::send_next_request(uint8_t &current_code)
+void MotorManager::process_error()
 {
-        static uint8_t cbuff = GET_ANGLE;
-        /* Clear synchronization flag */
-        /* Send request for the next command */
-        if (current_code == Request::SET_SPEED) {
-                current_code = cbuff;
-                if (terminalRxFlag) {
-                        terminalRxFlag = false;
-                        return;
+        if (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_15)) {
+                while (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_15)){
+                        robot.button_status = true;
+                        vTaskDelay(5);
                 }
+                /* Init motors after power reset */
+                vTaskDelay(100);
+                motor_wheel_1.init_wheel();
+                motor_wheel_2.init_wheel();
+                set_robot_speed(STOP_MOTION, STOP_MOTION);
+        } else {
+                //ToDo Add processing of each wheel
+                robot.error_status = true;
         }
-        if (current_code == Request::GET_ANGLE) {
-                motor_wheel_1.request_current();
-                motor_wheel_2.request_current();
-        } else if (current_code == Request::GET_CURRENT_STATUS) {
-                motor_wheel_1.request_error();
-                motor_wheel_2.request_error();
-        } else if (current_code == Request::GET_ERROR_STATUS) {
-                motor_wheel_1.request_angle();
-                motor_wheel_2.request_angle();
-        }
-
-        ++current_code;
-        if (current_code == Request::END_POSITION)
-                current_code = GET_ANGLE;
-        cbuff = current_code;
+        vTaskDelay(5);
 }
 
 /* ------------------------------------------------------------
@@ -257,16 +231,15 @@ void MotorManager::send_next_request(uint8_t &current_code)
 void MotorManager::run()
 {
         TickType_t pxPreviousWakeTime;
-        robot.code = Request::GET_ANGLE;
 	MotorErrorStatus status;
 
 	/* Peripheral initialization */
 	motor_wheel_1.init_usart(GPIOB, USART3, true);
-	motor_wheel_2.init_usart(GPIOA, UART4, true);
+	motor_wheel_2.init_usart(GPIOB, USART3, true);
 
 	/* Switch pin for rs485 driver */
 	motor_wheel_1.gpioSwitchInit(GPIOB, GPIO_Pin_12);
-        motor_wheel_2.gpioSwitchInit(GPIOA, GPIO_Pin_4);
+        motor_wheel_2.gpioSwitchInit(GPIOB, GPIO_Pin_12);
 
 	/* Should be after peripheral init */
 	motor_wheel_1.init_wheel();
@@ -274,61 +247,16 @@ void MotorManager::run()
 	set_robot_speed(STOP_MOTION, STOP_MOTION);
 
 	while (1) {
-	        /* Function for accurate task sleep time */
-	        pxPreviousWakeTime = xTaskGetTickCount();
+	        /* If command from high level has come set speed */
+	        if (terminalRxFlag)
+	                set_robot_speed();
+	        process_angle();
+	        if (terminalRxFlag)
+	                set_robot_speed();
+	        process_current();
 
-	        status = read_motors_aknowlege();
-	        if (status == MotorErrorStatus::OK) {
+	        //	                process_error();
 
-	                /* If command from high level has come set speed */
-	                if (terminalRxFlag) {
-	                        set_robot_speed();
-	                } else if (robot.code == Request::GET_ANGLE) {
-	                        process_angle();
-	                } else if (robot.code == Request::GET_CURRENT_STATUS) {
-	                        process_current();
-	                } else if (robot.code == Request::GET_ERROR_STATUS) {
-                                process_error();
-                        }
-
-	                send_next_request(robot.code);
-	        } else {
-	                uint8_t c = 3;
-	                while (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_15) && c) {
-	                        robot.button_status = true;
-
-	                        /* LED indication, motors do not answer */
-	                        ledRgb.mutex_take(RED);
-	                        set_robot_speed(STOP_MOTION, STOP_MOTION);
-	                        c--;
-	                        vTaskDelay(5);
-	                }
-	                if (!c) {
-	                        //ToDo error processing, motors do not work
-	                        ledRgb.mutex_give();
-	                }
-	                ledRgb.mutex_give();
-
-	                /* LED indication, button pressed */
-	                ledRgb.mutex_take(RED_FLASH);
-	                do {
-	                        robot.button_status = true;
-	                        vTaskDelay(5);
-	                } while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_15));
-	                ledRgb.mutex_give();
-
-	                /*
-	                 *ToDO is it necessary to reinit?
-	                for (uint8_t i = 0; i < 2; i++)
-	                        whAngleHistArr[i] = 0;
-	                        */
-
-	                /* Init motors after power reset */
-	                motor_wheel_1.init_wheel();
-	                motor_wheel_2.init_wheel();
-	                set_robot_speed(STOP_MOTION, STOP_MOTION);
-	        }
-	        vTaskDelay(3);
 //	        vTaskDelayUntil(&pxPreviousWakeTime, 4);
 	}
 }
@@ -358,7 +286,12 @@ extern "C"
 //***********************DMA_RECEIVE_INTERRUPT******************//
 	void DMA1_Stream1_IRQHandler(void)
 	{
-		BaseType_t xHigherPriorityTaskWoken = pdFALSE;			// Notify task about interrupt
+		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+                /* Set flag into motor constant */
+                motor_wheel_1.confirm_motor_answer();
+                motor_wheel_2.confirm_motor_answer();
+                vTaskNotifyGiveFromISR(mot_manager.task_handle,
+                                &xHigherPriorityTaskWoken);                     // Notify task about interrupt
 		DMA_ClearITPendingBit(DMA1_Stream1, DMA_IT_TCIF1);		// Clear DMA "transmitting complete" interrupt
 		DMA_Cmd(DMA1_Stream1, ENABLE);					// Reset DMA
 		if (xHigherPriorityTaskWoken)
@@ -374,40 +307,40 @@ extern "C"
 		if (xHigherPriorityTaskWoken)
 			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);		// Run Higher priority task if exist													// between ticks
 	}
-
-//---------------------------WHEEL_2---------------------------------//
-
-	//***********************UART_RECEIVE_INTERRUPT******************//
-	void UART4_IRQHandler(void)
-	{
-		BaseType_t xHigherPriorityTaskWoken = pdFALSE;			// Notify task about interrupt
-		if (USART_GetITStatus(UART4, USART_IT_IDLE)){			// Clear IDLE flag step 1
-			DMA_Cmd(DMA1_Stream2, DISABLE);				// DMA turn off to clear DMA1 counter
-			USART_ReceiveData(UART4);				// Clear IDLE flag step 2
-		}
-		if (USART_GetITStatus(UART4, USART_IT_TC)){
-			USART_ClearITPendingBit(UART4, USART_IT_TC);
-			GPIO_ResetBits(GPIOA, GPIO_Pin_4);
-		}
-		if (xHigherPriorityTaskWoken)					// Run Higher priority task if exist
-			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);		// between ticks
-	}
-	//***********************DMA_RECEIVE_INTERRUPT******************//
-	void DMA1_Stream2_IRQHandler(void)
-	{
-		BaseType_t xHigherPriorityTaskWoken = pdFALSE;			// Notify task about interrupt
-		DMA_ClearITPendingBit(DMA1_Stream2, DMA_IT_TCIF2);		// Clear DMA "transmitting complete" interrupt
-		DMA_Cmd(DMA1_Stream2, ENABLE);				        // Reset DMA
-		if (xHigherPriorityTaskWoken)				        // Run Higher priority task if exist
-			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);		// between ticks
-	}
-	//***********************DMA_TRANSMIT_INTERRUPT*****************//
-	void DMA1_Stream4_IRQHandler(void)
-	{
-		BaseType_t xHigherPriorityTaskWoken = pdFALSE;			// Notify task about interrupt
-		DMA_ClearITPendingBit(DMA1_Stream4, DMA_IT_TCIF4);		// Clear DMA "transmission complete" interrupt
-		DMA_Cmd(DMA1_Stream4, DISABLE);					// Stop DMA transmitting
-		if (xHigherPriorityTaskWoken)					// Run Higher priority task if exist
-			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);		// between ticks
-	}
+//
+////---------------------------WHEEL_2---------------------------------//
+//
+//	//***********************UART_RECEIVE_INTERRUPT******************//
+//	void UART4_IRQHandler(void)
+//	{
+//		BaseType_t xHigherPriorityTaskWoken = pdFALSE;			// Notify task about interrupt
+//		if (USART_GetITStatus(UART4, USART_IT_IDLE)){			// Clear IDLE flag step 1
+//			DMA_Cmd(DMA1_Stream2, DISABLE);				// DMA turn off to clear DMA1 counter
+//			USART_ReceiveData(UART4);				// Clear IDLE flag step 2
+//		}
+//		if (USART_GetITStatus(UART4, USART_IT_TC)){
+//			USART_ClearITPendingBit(UART4, USART_IT_TC);
+//			GPIO_ResetBits(GPIOA, GPIO_Pin_4);
+//		}
+//		if (xHigherPriorityTaskWoken)					// Run Higher priority task if exist
+//			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);		// between ticks
+//	}
+//	//***********************DMA_RECEIVE_INTERRUPT******************//
+//	void DMA1_Stream2_IRQHandler(void)
+//	{
+//		BaseType_t xHigherPriorityTaskWoken = pdFALSE;			// Notify task about interrupt
+//		DMA_ClearITPendingBit(DMA1_Stream2, DMA_IT_TCIF2);		// Clear DMA "transmitting complete" interrupt
+//		DMA_Cmd(DMA1_Stream2, ENABLE);				        // Reset DMA
+//		if (xHigherPriorityTaskWoken)				        // Run Higher priority task if exist
+//			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);		// between ticks
+//	}
+//	//***********************DMA_TRANSMIT_INTERRUPT*****************//
+//	void DMA1_Stream4_IRQHandler(void)
+//	{
+//		BaseType_t xHigherPriorityTaskWoken = pdFALSE;			// Notify task about interrupt
+//		DMA_ClearITPendingBit(DMA1_Stream4, DMA_IT_TCIF4);		// Clear DMA "transmission complete" interrupt
+//		DMA_Cmd(DMA1_Stream4, DISABLE);					// Stop DMA transmitting
+//		if (xHigherPriorityTaskWoken)					// Run Higher priority task if exist
+//			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);		// between ticks
+//	}
 }

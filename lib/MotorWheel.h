@@ -48,37 +48,53 @@
 #define MODE_PWM                ((uint8_t)  3)
 #define MODE_NONE               ((uint8_t)  0)
 
+/* Internal Flags */
+
+#define MAX_REQUEST_TRY         ((uint8_t) 3)
+
 #include "stm32f4xx.h"
 
 #include "ProtocolModBus.h"
+
+// ToDo fix this crutch
+enum RequestType {
+        READ,
+        WRITE
+};
+
+struct RequestOptions {
+        int16_t payload;
+        uint8_t id;
+        uint8_t last_code;
+        RequestType rquest_type; //read or write command
+};
 
 class MotorWheel: public ProtocolModBus {
 public:
         MotorWheel(uint8_t id);
         virtual ~MotorWheel();
 
-        struct WheelOptions {
-                int32_t angle;
-                int16_t speed;
-                int16_t current_value;
-                uint8_t id;
-                uint8_t last_code;
-                bool error_flag;
-        } options;
-
+        /* Read only access to wheel options */
         bool init_wheel();
-        bool wait_acknowlege();
 
-        void set_wheel_speed(const int16_t s_val);
-        void request_angle();
-        void request_wheel_speed();
-        void request_current();
-        void request_error();
-        void clear_error();
+        bool set_wheel_speed(int16_t _val);
+        bool request_angle(int32_t& angle);
+        bool request_wheel_speed(int16_t& speed);
+        bool request_current(int16_t& current);
+        bool request_error(bool& error_flag);
+        bool clear_error();
 
-        bool read_response();
+        inline void confirm_motor_answer()
+        {
+                akn_flag = true;
+        }
+
 private:
-        uint8_t id;
+        inline bool wait_acknowlege();
+        RequestOptions options;
+//        void (*last_request)(uint8_t, int16_t, int16_t);
+
+        static bool akn_flag;
 };
 
 #endif /* LIB_MOTORWHEEL_H_ */

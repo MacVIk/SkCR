@@ -190,7 +190,7 @@ void DriverUsart::init_usart(GPIO_TypeDef* GPIOx, USART_TypeDef* USARTx, bool rs
 	USART_ClearITPendingBit(USARTx, USART_IT_IDLE);
 
 	USART_ITConfig(USARTx, USART_IT_IDLE, ENABLE);
-	if (rsStatus == true){
+	if (rsStatus == true) {
 		USART_ITConfig(USARTx, USART_IT_TC, ENABLE);
 	}
 

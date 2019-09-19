@@ -29,9 +29,6 @@
 
 enum MotorErrorStatus : char {
         OK,
-        MOTORS_DIF_COMMAND,
-        MOTOR_1_DONOT_ANSWER,
-        MOTOR_2_DONOT_ANSWER,
         MOTORS_DONOT_ANSWER
 };
 
@@ -67,6 +64,7 @@ private:
                 uint8_t code;
                 bool button_status;
                 bool current_status;
+                bool error_status;
         } robot;
 
         /* Working methods */
@@ -74,7 +72,6 @@ private:
         void set_robot_speed(float lin_vel, float ang_vel);
         void process_angle();
         void process_current();
-        void process_error();
         void process_speed();
 
         /* Terminal communication parameters */
@@ -83,15 +80,14 @@ private:
         uint8_t speed_byte_arr[8];
         bool terminalRxFlag;
 
-	/* Internal interface */
-        MotorErrorStatus read_motors_aknowlege();
-	void send_next_request(uint8_t &current_code);
-
         /* Internal math transforms */
-	void fetch_angle();
+	inline void fetch_angle();
         void convert_robot_to_wheel_speed(float* hDatArr, int16_t* whArr);
         void convert_wheel_to_robot_speed();
-        void calculate_position();
+        void calculate_position(int32_t* wheel_arr);
+
+        /* Internal interface */
+        void process_error();
 };
 
 extern MotorManager mot_manager;
