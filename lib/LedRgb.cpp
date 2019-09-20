@@ -12,6 +12,8 @@
 #include "stm32f4xx_tim.h"
 
 LedRgb ledRgb;
+static const uint32_t color_red_contin = 2800;
+static const uint32_t color_red_flash = 1400;
 
 LedRgb::LedRgb() {
         buttonMutex = false;
@@ -60,11 +62,13 @@ void LedRgb::init_gpio()
         tim5_ch3_pwm.TIM_Pulse = 1400;
         tim5_ch3_pwm.TIM_OutputState = ENABLE;
         TIM_OC3Init(TIM5, &tim5_ch3_pwm);
+
 }
 
 void LedRgb::mutex_take(const cl color)
 {
-        set_color(color);
+        if (!buttonMutex)
+                set_color(color);
         this->buttonMutex = true;
 }
 
@@ -83,7 +87,7 @@ void LedRgb::set_color(const cl color)
         /* Check button status */
         if (!buttonMutex) {
                 if (color == RED) {
-                        TIM_SetCompare3(TIM5, 2800);
+                        TIM_SetCompare3(TIM5, color_red_contin);
                         GPIO_ResetBits(GPIOA, GPIO_Pin_3);
                         GPIO_ResetBits(GPIOA, GPIO_Pin_15);
                 } else if (color == GREEN) {
@@ -95,11 +99,11 @@ void LedRgb::set_color(const cl color)
                         GPIO_SetBits(GPIOA, GPIO_Pin_3);
                         GPIO_ResetBits(GPIOA, GPIO_Pin_15);
                 } else if (color == WHITE) {
-                        TIM_SetCompare3(TIM5, 2800);
+                        TIM_SetCompare3(TIM5, color_red_contin);
                         GPIO_SetBits(GPIOA, GPIO_Pin_3);
                         GPIO_SetBits(GPIOA, GPIO_Pin_15);
                 } else if (color == RED_FLASH) {
-                        TIM_SetCompare3(TIM5, 1400);
+                        TIM_SetCompare3(TIM5, color_red_flash);
                         GPIO_ResetBits(GPIOA, GPIO_Pin_3);
                         GPIO_ResetBits(GPIOA, GPIO_Pin_15);
                 } else {

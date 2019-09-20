@@ -100,7 +100,7 @@ void DriverUsart::init_dma(USART_TypeDef* USARTx)
 	DmaRxUart.DMA_Memory0BaseAddr = (uint32_t) usart.RxArr;
 	DmaRxUart.DMA_Channel = DMA_Chanel;
 	DmaRxUart.DMA_DIR = DMA_DIR_PeripheralToMemory;
-	DmaRxUart.DMA_BufferSize = 20;
+	DmaRxUart.DMA_BufferSize = MAX_MESSEGE_LENGTH_RX;
 	DmaRxUart.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
 	DmaRxUart.DMA_MemoryInc = DMA_MemoryInc_Enable;
 	DmaRxUart.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
@@ -114,7 +114,7 @@ void DriverUsart::init_dma(USART_TypeDef* USARTx)
 	DmaTxUart.DMA_Memory0BaseAddr = (uint32_t) usart.TxArr;
 	DmaTxUart.DMA_Channel = DMA_Chanel;
 	DmaTxUart.DMA_DIR = DMA_DIR_MemoryToPeripheral;
-	DmaTxUart.DMA_BufferSize = 20;
+	DmaTxUart.DMA_BufferSize = MAX_MESSEGE_LENGTH_TX;
 	DmaTxUart.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
 	DmaTxUart.DMA_MemoryInc = DMA_MemoryInc_Enable;
 	DmaTxUart.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;

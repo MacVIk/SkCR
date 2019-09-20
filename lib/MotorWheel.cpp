@@ -86,7 +86,7 @@ bool MotorWheel::set_wheel_speed(int16_t s_val)
         options.payload = s_val;
         options.rquest_type = RequestType::WRITE;
 
-        write_single_register(options.id, options.payload, options.payload);
+        write_single_register(options.id, options.last_code, options.payload);
         if (wait_acknowlege())
                 return true;
         else

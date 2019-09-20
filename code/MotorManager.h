@@ -27,21 +27,7 @@
 #define CONST_WHEEL_2 		((float32_t) 3.57f)	// (pointsOfwheel/rad)
 #define ROTATION_CONST		((float32_t) 0.1666f)  	// WheelRadius/CenterRadius
 
-enum MotorErrorStatus : char {
-        OK,
-        MOTORS_DONOT_ANSWER
-};
-
-/* Requests for motors */
-enum Request : char {
-        SET_SPEED,
-        GET_ANGLE,
-        GET_CURRENT_STATUS,
-        GET_ERROR_STATUS,
-
-        /* This macros should be the last */
-        END_POSITION
-};
+#define PAUSE_AFTER_POWER_ON    ((uint16_t) 3000)       // Need for drivers launch (mc)
 
 class MotorManager: public TaskWrapper {
 public:
@@ -73,6 +59,7 @@ private:
         void process_angle();
         void process_current();
         void process_speed();
+        void process_motor_error();
 
         /* Terminal communication parameters */
         //ToDO check mutex in FreeRtos
@@ -87,7 +74,7 @@ private:
         void calculate_position(int32_t* wheel_arr);
 
         /* Internal interface */
-        void process_error();
+        void process_robot_error();
 };
 
 extern MotorManager mot_manager;

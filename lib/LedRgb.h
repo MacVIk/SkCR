@@ -9,7 +9,7 @@
 #define LIB_LEDRGB_H_
 
 /* Type for led color */
-typedef enum {
+typedef enum LedColor : char {
         RED             = 1,
         GREEN           = 2,
         BLUE            = 3,

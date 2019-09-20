@@ -29,10 +29,13 @@ static uint8_t uart_tx_arr[24];
 inline void Terminal::add_error_byte(uint8_t& answerLength)
 {
         uint8_t err_byte = 0;
-        if (mot_manager.get_robot_button_status())
+        if (mot_manager.get_robot_button_status()) {
                 err_byte |= 1;
-        if (mot_manager.get_robot_current_status())
+        }
+        if (mot_manager.get_robot_current_status()) {
                 err_byte |= 1 << 1;
+        }
+
         //        if (collisionHandler->getStatus())
         //                err_byte |= 1 << 2;
         uart_tx_arr[answerLength++] = err_byte;
