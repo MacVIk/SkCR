@@ -258,10 +258,12 @@ void MotorManager::run()
 
 	/* Peripheral initialization */
 	motor_wheel_1.init_usart(GPIOB, USART3, true);
+//	motor_wheel_2.init_usart(GPIOB, USART3, true);
 	motor_wheel_2.init_usart(GPIOA, UART4, true);
 
 	/* Switch pin for rs485 driver */
 	motor_wheel_1.gpioSwitchInit(GPIOB, GPIO_Pin_12);
+//	motor_wheel_2.gpioSwitchInit(GPIOB, GPIO_Pin_12);
         motor_wheel_2.gpioSwitchInit(GPIOA, GPIO_Pin_4);
 
 	/* Should be after peripheral init */
