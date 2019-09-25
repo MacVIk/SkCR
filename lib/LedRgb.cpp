@@ -50,9 +50,10 @@ void LedRgb::init_gpio()
 
         TIM_TimeBaseInitTypeDef tim5_ch3;
         TIM_TimeBaseStructInit(&tim5_ch3);
-        tim5_ch3.TIM_Prescaler = 50000-1;
+        tim5_ch3.TIM_Prescaler = 50000 - 1;
         tim5_ch3.TIM_Period = 2800;
         TIM_TimeBaseInit(TIM5, &tim5_ch3);
+        TIM_Cmd(TIM5, ENABLE);
 
         TIM5->CR1 |= TIM_CR1_ARPE;
 
