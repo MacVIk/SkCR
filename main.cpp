@@ -70,11 +70,15 @@ void system_clock_config()
 #include "MotorManager.h"
 #include "I2c1Manager.h"
 #include "LedRgb.h"
+#include "GlobalTimerus.h"
 
 int main(void) {
 
         /* Set clocking frequency */
         system_clock_config();
+
+        //ToDo uncomment when check validity
+//        GlobalTimer_us* tim6 = GlobalTimer_us::get_instance();
 
         terminal.task_create(256, 2, "Terminal");
 
