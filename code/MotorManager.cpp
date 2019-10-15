@@ -266,7 +266,7 @@ void MotorManager::run()
 //	motor_wheel_2.gpioSwitchInit(GPIOB, GPIO_Pin_12);
         motor_wheel_2.gpioSwitchInit(GPIOA, GPIO_Pin_4);
 
-	/* Should be after peripheral init */
+	/* Should be after peripheral initialization */
 	motor_wheel_1.init_wheel();
 	motor_wheel_2.init_wheel();
 	set_robot_speed(STOP_MOTION, STOP_MOTION);
