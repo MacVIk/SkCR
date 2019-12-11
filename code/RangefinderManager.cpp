@@ -165,14 +165,15 @@ void RangefinderManager::calculate_distance(uint8_t* distArr, uint8_t i)
                 distArr[0] = 0xff;
         else
                 distArr[0] = (sensTimeArr[i] - 500) / 56;
-        uint8_t sortArr[10];
-        for (uint8_t j = 0; j < 10; j++)
-                sortArr[j] = distArr[j];
-        median = quick_select(sortArr, 0, 10, 5);
-        for (uint8_t j = 9; j > 0; j--)
-                distArr[j] = distArr[j - 1];
-        if ((median - distArr[0] > 5) || (median - distArr[0] < -5))
-                distArr[0] = median;
+
+//        uint8_t sortArr[10];
+//        for (uint8_t j = 0; j < 10; j++)
+//                sortArr[j] = distArr[j];
+//        median = quick_select(sortArr, 0, 10, 5);
+//        for (uint8_t j = 9; j > 0; j--)
+//                distArr[j] = distArr[j - 1];
+//        if ((median - distArr[0] > 5) || (median - distArr[0] < -5))
+//                distArr[0] = median;
 }
 
 void RangefinderManager::get_distance(uint8_t* distArr)

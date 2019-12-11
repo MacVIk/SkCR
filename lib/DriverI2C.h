@@ -20,6 +20,8 @@ public:
                         uint8_t regNumb, uint8_t* data);
         void write_i2c(uint8_t slaveAdr, uint8_t subRegAdr,
                         uint8_t data);
+private:
+        void init_i2c_watchdog();
 
 };
 

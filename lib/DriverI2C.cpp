@@ -10,6 +10,7 @@
 #include "stm32f4xx_rcc.h"
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_i2c.h"
+#include "stm32f4xx_tim.h"
 #include "misc.h"
 
 DriverI2C::DriverI2C() {
@@ -70,6 +71,28 @@ void DriverI2C::init_i2c()
         //      NVIC_Init(&dmaRxI2cNvic);
         //      NVIC_SetPriority(I2C1_EV_IRQn, 10);
 }
+
+void DriverI2C::init_i2c_watchdog()
+{
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM13, ENABLE);
+
+    TIM_TimeBaseInitTypeDef i2c_watchdog_tim13;
+    TIM_TimeBaseStructInit(&i2c_watchdog_tim13);
+
+    /* Wait 500 us */
+    i2c_watchdog_tim13.TIM_Period = 50;
+    i2c_watchdog_tim13.TIM_Prescaler = 840 - 1;
+    TIM_ITConfig(TIM13, TIM_IT_Update, ENABLE);
+    TIM_TimeBaseInit(TIM13, &i2c_watchdog_tim13);
+
+    NVIC_InitTypeDef i2c_watchdog_interrupt;
+    i2c_watchdog_interrupt.NVIC_IRQChannel = TIM8_UP_TIM13_IRQn;
+    i2c_watchdog_interrupt.NVIC_IRQChannelPreemptionPriority = 10;
+    i2c_watchdog_interrupt.NVIC_IRQChannelSubPriority = 10;
+    i2c_watchdog_interrupt.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&i2c_watchdog_interrupt);
+}
+
 
 void DriverI2C::read_i2c(uint8_t slaveAdr, uint8_t subRegAdr, uint8_t regNumb, uint8_t* data)
 {

@@ -90,7 +90,6 @@ void Terminal::run()
             mot_manager.get_robot_position(uart_tx_arr);
             answerLength = 12;
 
-            /* Receive from IMU ----- (x, y, theta) */
         } else if (commad == HighLvlCommand::GET_ACCELERATION) {
             i2c_manager.get_acceleration(uart_tx_arr);
             answerLength = 12;
