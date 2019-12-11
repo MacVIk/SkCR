@@ -32,14 +32,14 @@
 
 class ImuTroyka: public DriverI2C {
 public:
-        void init_imu();
-        void read_accelerations(float* acc_arr);
-        void read_angular_velocity(float* gyr_arr);
-        void read_magnet_field(float* gyr_arr);
+    void init_imu();
+    void read_accelerations(float* acc_arr);
+    void read_angular_velocity(float* gyr_arr);
+    void read_magnet_field(float* gyr_arr);
 private:
-        void init_accelerometer();
-        void init_gyroscope();
-        void init_magnetometer();
+    void init_accelerometer();
+    void init_gyroscope();
+    void init_magnetometer();
 };
 
 #endif /* LIB_IMUTROYKA_H_ */

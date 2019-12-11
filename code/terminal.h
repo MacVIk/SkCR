@@ -12,10 +12,11 @@
 
 class Terminal: public TaskWrapper {
 
-        inline void add_error_byte(uint8_t& answerLength);
-        inline void calculate_checksum(const uint8_t answerLength);
+    inline void add_error_byte(uint8_t& answerLength);
+    inline void calculate_checksum(const uint8_t answerLength);
+
 public:
-	void run();
+    void run();
 };
 
 extern Terminal terminal;

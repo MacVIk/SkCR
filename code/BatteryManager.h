@@ -19,14 +19,14 @@
 
 class BatteryManager: public TaskWrapper {
 public:
-        BatteryManager();
-	virtual ~BatteryManager();
+    BatteryManager();
+    virtual ~BatteryManager();
 
-	void init_adc();
-	uint8_t get_charge();
-	void run();
+    void init_adc();
+    uint8_t get_charge();
+    void run();
 private:
-	static uint8_t ChargeVal_P;
+    static uint8_t ChargeVal_P;
 };
 
 extern BatteryManager bat_manager;

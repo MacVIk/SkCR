@@ -12,16 +12,16 @@
 
 class DriverI2C {
 public:
-        DriverI2C();
-        virtual ~DriverI2C();
+    DriverI2C();
+    virtual ~DriverI2C();
 
-        void init_i2c();
-        void read_i2c(uint8_t slaveAdr, uint8_t subRegAdr,
-                        uint8_t regNumb, uint8_t* data);
-        void write_i2c(uint8_t slaveAdr, uint8_t subRegAdr,
-                        uint8_t data);
+    void init_i2c();
+    void read_i2c(uint8_t slaveAdr, uint8_t subRegAdr,
+            uint8_t regNumb, uint8_t* data);
+    void write_i2c(uint8_t slaveAdr, uint8_t subRegAdr,
+            uint8_t data);
 private:
-        void init_i2c_watchdog();
+    void init_i2c_watchdog();
 
 };
 

@@ -20,22 +20,22 @@ typedef enum LedColor : char {
 
 class LedRgb {
 public:
-        LedRgb();
-        virtual ~LedRgb();
+    LedRgb();
+    virtual ~LedRgb();
 
-        /* Turn on the led */
-        void init_led();
+    /* Turn on the led */
+    void init_led();
 
-        /* Control function */
-        void mutex_take(const cl color);
-        void mutex_take();
-        void mutex_give();
+    /* Control function */
+    void mutex_take(const cl color);
+    void mutex_take();
+    void mutex_give();
 
-        /* User function */
-        void set_color(const cl color);
+    /* User function */
+    void set_color(const cl color);
 private:
-        void init_gpio();
-        bool buttonMutex;
+    void init_gpio();
+    bool buttonMutex;
 };
 
 extern LedRgb ledRgb;

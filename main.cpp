@@ -27,34 +27,34 @@
  */
 void system_clock_config()
 {
-        /* Enable HSE oscillator */
-        RCC_HSEConfig(RCC_HSE_ON);
-        while (!RCC_GetFlagStatus(RCC_FLAG_HSERDY));
+    /* Enable HSE oscillator */
+    RCC_HSEConfig(RCC_HSE_ON);
+    while (!RCC_GetFlagStatus(RCC_FLAG_HSERDY));
 
-        /* Set FLASH latency */
-        FLASH_SetLatency(FLASH_Latency_5);
+    /* Set FLASH latency */
+    FLASH_SetLatency(FLASH_Latency_5);
 
-        /* Set AHB (system bus) clock frequency */
-        RCC_HCLKConfig(RCC_SYSCLK_Div1);
+    /* Set AHB (system bus) clock frequency */
+    RCC_HCLKConfig(RCC_SYSCLK_Div1);
 
-        /* Set APB1 and APB2 clock frequency */
-        RCC_PCLK1Config(RCC_HCLK_Div4);
-        RCC_PCLK2Config(RCC_HCLK_Div2);
+    /* Set APB1 and APB2 clock frequency */
+    RCC_PCLK1Config(RCC_HCLK_Div4);
+    RCC_PCLK2Config(RCC_HCLK_Div2);
 
-         /* Set HSE as source for PLL
-         * Set divider (M, N, P, Q)
-         * Enable PLL
-         */
-        RCC_PLLConfig(RCC_PLLSource_HSE, 8, 336, 2, 7);
-        RCC_PLLCmd(ENABLE);
-        while (!RCC_GetFlagStatus(RCC_FLAG_PLLRDY));
+    /* Set HSE as source for PLL
+     * Set divider (M, N, P, Q)
+     * Enable PLL
+     */
+    RCC_PLLConfig(RCC_PLLSource_HSE, 8, 336, 2, 7);
+    RCC_PLLCmd(ENABLE);
+    while (!RCC_GetFlagStatus(RCC_FLAG_PLLRDY));
 
-        /* SysClk activation on the main PLL */
-        RCC_SYSCLKConfig(RCC_SYSCLKSource_PLLCLK);
-        while (!RCC_GetFlagStatus(RCC_FLAG_PLLRDY));
+    /* SysClk activation on the main PLL */
+    RCC_SYSCLKConfig(RCC_SYSCLKSource_PLLCLK);
+    while (!RCC_GetFlagStatus(RCC_FLAG_PLLRDY));
 
-        /* Update CMSIS variable */
-        SystemCoreClock = 168000000;
+    /* Update CMSIS variable */
+    SystemCoreClock = 168000000;
 }
 
 /* FreeRtos core includes */
@@ -74,28 +74,28 @@ void system_clock_config()
 
 int main(void) {
 
-        /* Set clocking frequency */
-        system_clock_config();
+    /* Set clocking frequency */
+    system_clock_config();
 
-        //ToDo uncomment when check validity
-//        GlobalTimer_us* tim6 = GlobalTimer_us::get_instance();
+    //ToDo uncomment when check validity
+    //        GlobalTimer_us* tim6 = GlobalTimer_us::get_instance();
 
-        terminal.task_create(256, 2, "Terminal");
+    terminal.task_create(256, 2, "Terminal");
 
-        bat_manager.task_create(256, 1, "Battery");
+    bat_manager.task_create(256, 1, "Battery");
 
-        rf_manager.task_create(512, 1, "Rangefinder");
+    rf_manager.task_create(512, 1, "Rangefinder");
 
-        mot_manager.task_create(2048, 1, "Motors");
+    mot_manager.task_create(2048, 1, "Motors");
 
-        i2c_manager.task_create(1024, 1, "I2C");
+    i2c_manager.task_create(1024, 1, "I2C");
 
-        /* Robot LED initialisatin */
-        ledRgb.init_led();
+    /* Robot LED initialisatin */
+    ledRgb.init_led();
 
-        /* Start tasks */
-        vTaskStartScheduler();
+    /* Start tasks */
+    vTaskStartScheduler();
 
-        return 1;
+    return 1;
 }
 

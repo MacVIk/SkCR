@@ -14,16 +14,16 @@
 
 class TaskWrapper {
 public:
-        TaskWrapper();
-        virtual ~TaskWrapper();
+    TaskWrapper();
+    virtual ~TaskWrapper();
 
-        TaskHandle_t task_handle;
-        bool task_create(const StackType_t ulStackDepth, UBaseType_t priority,
-                        const portCHAR * const name);
+    TaskHandle_t task_handle;
+    bool task_create(const StackType_t ulStackDepth, UBaseType_t priority,
+            const portCHAR * const name);
 protected:
-        virtual void run() = 0;
+    virtual void run() = 0;
 private:
-        static void task_function(const void *parameters);
+    static void task_function(const void *parameters);
 };
 
 #endif /* LIB_TASKWRAPPER_H_ */

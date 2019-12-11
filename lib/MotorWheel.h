@@ -58,43 +58,43 @@
 
 // ToDo fix this crutch
 enum RequestType {
-        READ,
-        WRITE
+    READ,
+    WRITE
 };
 
 struct RequestOptions {
-        int16_t payload;
-        uint8_t id;
-        uint8_t last_code;
-        RequestType rquest_type; //read or write command
+    int16_t payload;
+    uint8_t id;
+    uint8_t last_code;
+    RequestType rquest_type; //read or write command
 };
 
 class MotorWheel: public ProtocolModBus {
 public:
-        MotorWheel(uint8_t id);
-        virtual ~MotorWheel();
+    MotorWheel(uint8_t id);
+    virtual ~MotorWheel();
 
-        /* Read only access to wheel options */
-        bool init_wheel();
+    /* Read only access to wheel options */
+    bool init_wheel();
 
-        bool set_wheel_speed(int16_t _val);
-        bool request_angle(int32_t& angle);
-        bool request_wheel_speed(int16_t& speed);
-        bool request_current(int16_t& current);
-        bool request_error(bool& error_flag);
-        bool clear_error();
+    bool set_wheel_speed(int16_t _val);
+    bool request_angle(int32_t& angle);
+    bool request_wheel_speed(int16_t& speed);
+    bool request_current(int16_t& current);
+    bool request_error(bool& error_flag);
+    bool clear_error();
 
-        inline void confirm_motor_answer()
-        {
-                akn_flag = true;
-        }
+    inline void confirm_motor_answer()
+    {
+        akn_flag = true;
+    }
 
 private:
-        inline bool wait_acknowlege();
-        RequestOptions options;
-//        void (*last_request)(uint8_t, int16_t, int16_t);
+    inline bool wait_acknowlege();
+    RequestOptions options;
+    //        void (*last_request)(uint8_t, int16_t, int16_t);
 
-        static bool akn_flag;
+    static bool akn_flag;
 };
 
 #endif /* LIB_MOTORWHEEL_H_ */
